@@ -10,9 +10,9 @@ EXE_NAME=/demo.bin
 
 TARGET=$(TARGET_DIRECTORY)$(BUILD_TARGET)$(EXE_NAME)
 
-PROJECT_SOURCE=	projects/$(BUILD_TARGET)/main.cpp
+PROJECT_SOURCE=	$(PROJECT_HOME)/src/projects/$(BUILD_TARGET)/main.cpp
 
-OBJECTS=$(join $(OBJECT_DIRECTORY), $(notdir $(SOURCES:.cpp=.o)))
+OBJECTS=$(join $(addprefix $(OBJECT_DIRECTORY), $(dir $(SOURCES))), $(notdir $(SOURCES:.cpp=.o)))
 
 all: $(OBJECTS) $(TARGET)
 
@@ -20,7 +20,7 @@ $(TARGET): $(OBJECTS)
 	echo "Objects:""$(OBJECTS)"
 	$(GCC) $(CPPFLAGS) $(INCLUDES) $(OBJECTS) $(PROJECT_SOURCE) -o $@ $(LIBS)
 
-$(OBJECTS): $(SOURCES)
+%.o: %.cpp
 	$(GCC) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
