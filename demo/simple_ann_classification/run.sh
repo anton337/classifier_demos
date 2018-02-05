@@ -1,4 +1,9 @@
 
 DIR=`basename ${PWD}`
 
-$PROJECT_HOME/bin/$DIR/demo.bin
+DATA=$PROJECT_HOME/data/$DIR/digits_mnist.bmp
+
+EXECUTABLE=$PROJECT_HOME/bin/$DIR/demo.bin
+
+$EXECUTABLE $DATA
+

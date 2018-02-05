@@ -6,9 +6,11 @@ echo "Project home: "$PROJECT_HOME
 
 export PROJECT_HOME=$PROJECT_HOME
 
-echo "Running project $1"
+export PROJECT=simple_ann_classification
 
-cd $PROJECT_HOME/demo/$1/
+echo "Running project $PROJECT"
+
+cd $PROJECT_HOME/demo/$PROJECT/
 
 ./run.sh
 
