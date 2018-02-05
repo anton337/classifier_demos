@@ -1,6 +1,10 @@
 #ifndef PERCEPTRON_H
 #define PERCEPTRON_H
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
 
 template < typename T >
 T sigmoid1(T x)
@@ -591,25 +595,28 @@ struct training_info
 
     void update_gradient ()
     {
-        for(long layer = 0,k = 0;layer < n_layers;layer++)
+        if(quasi_newton != NULL)
         {
-            for(long i=0;i<n_nodes[layer+1];i++)
+            for(long layer = 0,k = 0;layer < n_layers;layer++)
             {
-                for(long j=0;j<n_nodes[layer];j++,k++)
+                for(long i=0;i<n_nodes[layer+1];i++)
                 {
-                    quasi_newton->grad_tmp[k] += partial_weights_neuron[layer][i][j] / n_elements;
+                    for(long j=0;j<n_nodes[layer];j++,k++)
+                    {
+                        quasi_newton->grad_tmp[k] += partial_weights_neuron[layer][i][j] / n_elements;
+                    }
                 }
-            }
-            for(long i=0;i<n_nodes[layer+1];i++,k++)
-            {
-                quasi_newton->grad_tmp[k] += partial_weights_bias[layer][i] / n_elements;
+                for(long i=0;i<n_nodes[layer+1];i++,k++)
+                {
+                    quasi_newton->grad_tmp[k] += partial_weights_bias[layer][i] / n_elements;
+                }
             }
         }
     }
 
     void globalUpdate()
     {
-        if(quasi_newton->quasi_newton_update)
+        if(quasi_newton != NULL && quasi_newton->quasi_newton_update)
         {
             for(long layer = 0,k = 0;layer < n_layers;layer++)
             {
@@ -626,7 +633,7 @@ struct training_info
                 }
             }
         }
-        else
+        else if(quasi_newton != NULL)
         {
             for(long layer = 0,k = 0;layer < n_layers;layer++)
             {
@@ -643,6 +650,23 @@ struct training_info
                 }
             }
         }
+        else
+        {
+            for(long layer = 0,k = 0;layer < n_layers;layer++)
+            {
+                for(long i=0;i<n_nodes[layer+1];i++)
+                {
+                    for(long j=0;j<n_nodes[layer];j++,k++)
+                    {
+                        weights_neuron[layer][i][j] += partial_weights_neuron[layer][i][j] / n_elements;
+                    }
+                }
+                for(long i=0;i<n_nodes[layer+1];i++,k++)
+                {
+                    weights_bias[layer][i] += partial_weights_bias[layer][i] / n_elements;
+                }
+            }
+        }
     }
 
 };
@@ -656,10 +680,8 @@ T min(T a,T b)
 template<typename T>
 void training_worker(training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
-    
     for(long n=0;n<vrtx.size();n++)
     {
-
         // initialize input activations
         for(long i=0;i<g->n_nodes[0];i++)
         {
@@ -676,57 +698,17 @@ void training_worker(training_info<T> * g,std::vector<long> const & vrtx,T * var
                     sum += g->activation_values[layer][j] * g->weights_neuron[layer][i][j];
                 }
                 g->activation_values[layer+1][i] = sigmoid(sum,g->type);
-                //std::cout << g->activation_values[layer+1][i] << '\t';
             }
-            //std::cout << std::endl;
         }
         long last_layer = g->n_nodes.size()-2;
         // initialize observed labels
-        T max_err = 0;
-        T min_err = 1e12;
-        T tmp_err;
         T min_partial_error = 0;
-        T ind = 0;
         for(long i=0;i<g->n_nodes[last_layer];i++)
         {
-            tmp_err = fabs(g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i]);
-            if(tmp_err>max_err)
-            {
-                max_err = tmp_err;
-            }
-            if(tmp_err<min_err)
-            {
-                min_err = tmp_err;
-                ind = i;
-            }
-        }
-        // MARK !!!!!!!!!!!!!!!!!!
-        train_index = 0;
-        for(long i=0;i<g->n_nodes[last_layer];i++)
-        {
-            //g->partial_error += fabs(g->deltas[last_layer+1][i]);
-            //if(i==sample_index)
-            //if(fabs(g->deltas[last_layer+1][i]<min_partial_error))
-            //{
-            //    min_partial_error = fabs(g->deltas[last_layer+1][i]);
-            //    ind = i;
-            //}
-            g->deltas[last_layer+1][i] = 0;
-            if(i==train_index)
-            {
-                g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
-                min_partial_error += fabs(g->deltas[last_layer+1][i]);
-            }
-            else
-            {
-                g->deltas[last_layer+1][i] = 0;//damp_weight*(labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i]);
-                //min_partial_error += fabs(g->deltas[last_layer+1][i]);
-            }
-            //std::cout << g->deltas[last_layer+1][i] << '\t';
+            g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
+            min_partial_error += fabs(g->deltas[last_layer+1][i]);
         }
         g->partial_error += min_partial_error;
-        g->smallest_index += ind;
-        //std::cout << std::endl;
         // back propagation
         for(long layer = g->n_layers-1; layer >= 0; layer--)
         {
@@ -745,32 +727,21 @@ void training_worker(training_info<T> * g,std::vector<long> const & vrtx,T * var
                         g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j]*g->weights_neuron[layer+1][j][i];
                     }
                 }
-                //std::cout << g->deltas[layer+1][i] << '\t';
             }
-            //std::cout << std::endl;
-            //std::cout << "biases" << std::endl;
             // biases
             for(long i=0;i<g->n_nodes[layer+1];i++)
             {
                 g->partial_weights_bias[layer][i] += g->deltas[layer+1][i];
-                //std::cout << g->partial_weights_bias[layer][i] << '\t';
             }
-            //std::cout << std::endl;
-            //std::cout << "neuron weights" << std::endl;
             // neuron weights
             for(long i=0;i<g->n_nodes[layer+1];i++)
             {
                 for(long j=0;j<g->n_nodes[layer];j++)
                 {
                     g->partial_weights_neuron[layer][i][j] += g->activation_values[layer][j] * g->deltas[layer+1][i];
-                    //std::cout << g->partial_weights_neuron[layer][i][j] << '\t';
                 }
-                //std::cout << std::endl;
             }
-            //std::cout << std::endl;
         }
-        //char ch;
-        //std::cin >> ch;
     }
 
 }
@@ -782,6 +753,7 @@ struct Perceptron
 
     T ierror;
     T perror;
+    T final_error;
 
     T *** weights_neuron;
     T **  weights_bias;
@@ -795,6 +767,12 @@ struct Perceptron
     long n_outputs;
     long n_layers;
     std::vector<long> n_nodes;
+
+    bool continue_training;
+    bool stop_training;
+
+    std::vector<T> errs;
+    std::vector<T> test_errs;
 
     T get_variable(int ind)
     {
@@ -848,7 +826,7 @@ struct Perceptron
     {
         if(!quiet)
           std::cout << "dump to file:" << filename << std::endl;
-        ofstream myfile (filename.c_str());
+        std::ofstream myfile (filename.c_str());
         if (myfile.is_open())
         {
           myfile << "#n_nodes" << std::endl;
@@ -886,7 +864,7 @@ struct Perceptron
         }
         else
         {
-          cout << "Unable to open file: " << filename << std::endl;
+          std::cout << "Unable to open file: " << filename << std::endl;
           exit(1);
         }
 
@@ -896,7 +874,7 @@ struct Perceptron
     {
         if(!quiet)
           std::cout << "loading from file:" << filename << std::endl;
-        ifstream myfile (filename.c_str());
+        std::ifstream myfile (filename.c_str());
         if (myfile.is_open())
         {
           std::string line;
@@ -981,7 +959,7 @@ struct Perceptron
           }
           myfile.close();
         }
-        else cout << "Unable to open file: " << filename << std::endl;
+        else std::cout << "Unable to open file: " << filename << std::endl;
 
     }
 
@@ -989,15 +967,13 @@ struct Perceptron
     T alpha;
     int sigmoid_type;
 
-    // std::vector<long> nodes;
-    // nodes.push_back(2); // inputs
-    // nodes.push_back(3); // hidden layer
-    // nodes.push_back(1); // output layer
-    // nodes.push_back(1); // outputs
     Perceptron(std::vector<long> p_nodes)
     {
 
         quasi_newton = NULL;
+
+        continue_training = false;
+        stop_training = false;
 
         sigmoid_type = 0;
         alpha = 0.1;
@@ -1044,18 +1020,6 @@ struct Perceptron
                 weights_bias[layer][i] = 1.0 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
             }
         }
-
-        //weights_neuron[0][0][0] = .1;        weights_neuron[0][0][1] = .2;
-        //weights_neuron[0][1][0] = .3;        weights_neuron[0][1][1] = .4;
-        //weights_neuron[0][2][0] = .5;        weights_neuron[0][2][1] = .6;
-
-        //weights_bias[0][0] = .1;
-        //weights_bias[0][1] = .2;
-        //weights_bias[0][2] = .3;
-
-        //weights_neuron[1][0][0] = .6;        weights_neuron[1][0][1] = .7;      weights_neuron[1][0][2] = .8;
-
-        //weights_bias[1][0] = .5;
 
     }
 
@@ -1152,7 +1116,6 @@ struct Perceptron
           long last_layer = n_nodes.size()-2;
           for(long i=0;i<n_labels;i++)
           {
-            if(i==sample_index)
             {
               err += fabs(test_labels[e*n_labels+i] - activation_values2[last_layer][i]);
             }
@@ -1175,33 +1138,42 @@ struct Perceptron
                , T p_epsilon
                , long n_iterations
                , long n_elements
-               , long n_test_elements
                , long n_variables
-               , T * variables
-               , T * test_variables
                , long n_labels
+               , T * variables
                , T * labels
-               , T * test_labels
+               , bool enable_quasi = false
+               , long n_test_elements = 0
+               , T * test_variables = NULL
+               , T * test_labels = NULL
                , quasi_newton_info<T> * q_newton = NULL
                )
     {
         sigmoid_type = p_sigmoid_type;
         epsilon = p_epsilon;
-        if(n_variables != n_nodes[0]){std::cout << "error 789437248932748293" << std::endl;exit(0);}
-        if(q_newton == NULL)
+        if(n_variables != n_nodes[0])
         {
-            quasi_newton = new quasi_newton_info<T>();
-            quasi_newton->alpha = alpha;
-            quasi_newton->n_nodes = n_nodes;
-            quasi_newton->n_layers = n_layers;
-            quasi_newton->weights_neuron = weights_neuron;
-            quasi_newton->weights_bias = weights_bias;
-            quasi_newton->init_QuasiNewton();
-            quasi_newton->quasi_newton_update = false;
+            std::cout << "Error: num variables doesn't match." << std::endl;
+            exit(0);
         }
-        else
+        quasi_newton = NULL;
+        if(enable_quasi)
         {
-            quasi_newton = q_newton;
+            if(q_newton == NULL)
+            {
+                quasi_newton = new quasi_newton_info<T>();
+                quasi_newton->alpha = alpha;
+                quasi_newton->n_nodes = n_nodes;
+                quasi_newton->n_layers = n_layers;
+                quasi_newton->weights_neuron = weights_neuron;
+                quasi_newton->weights_bias = weights_bias;
+                quasi_newton->init_QuasiNewton();
+                quasi_newton->quasi_newton_update = true;
+            }
+            else
+            {
+                quasi_newton = q_newton;
+            }
         }
         ierror = 1e10;
         bool init = true;
@@ -1228,7 +1200,10 @@ struct Perceptron
             {
               g.push_back(new training_info<T>());
             }
-            quasi_newton->init_gradient();
+            if(quasi_newton!=NULL)
+            {
+              quasi_newton->init_gradient();
+            }
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->quasi_newton = quasi_newton;
@@ -1251,8 +1226,11 @@ struct Perceptron
               g[thread]->update_gradient();
               delete threads[thread];
             }
-            quasi_newton->update_QuasiNewton();
-            quasi_newton->SR1_update();
+            if(quasi_newton!=NULL)
+            {
+              quasi_newton->update_QuasiNewton();
+              quasi_newton->SR1_update();
+            }
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->globalUpdate();
@@ -1264,54 +1242,31 @@ struct Perceptron
             threads.clear();
             vrtx.clear();
             g.clear();
-            final_error = verify(n_test_elements,n_variables,test_variables,n_labels,test_labels);
+            if(n_test_elements>0&&test_variables!=NULL&&test_labels!=NULL)
+            {
+                final_error = verify(n_test_elements,n_variables,test_variables,n_labels,test_labels);
+            }
             static int cnt1 = 0;
             if(cnt1%100==0)
-            std::cout << iter << "\ttrain index=" << train_index << "\tdamp weight=" << damp_weight << "\tquasi_newton_update=" << quasi_newton->quasi_newton_update << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/n_elements << "\ttest\%error=" << 100*final_error << "\tindex=" << index/n_elements << std::endl;
+            std::cout << iter << "\tquasi newton=" << ((quasi_newton!=NULL)?(quasi_newton->quasi_newton_update?"true":"false"):"NULL") << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/n_elements << "\ttest\%error=" << 100*final_error << "\tindex=" << index/n_elements << std::endl;
             cnt1++;
             perror = error;
             errs.push_back(error/n_elements);
             test_errs.push_back(final_error);
-            if(error/n_elements < 0.1)
-            {
-                train_index = (train_index+1)%n_labels;//round(index/n_elements);
-            }
-            //if(train_index<0||train_index>=n_elements-1)
-            //{
-            //    train_index = 0;
-            //}
             if(init)
             {
                 ierror = error;
                 init = false;
             }
 
-            if((iter+1)%100000==0||stop_training)
+            if(stop_training)
             {
-                std::stringstream ss;
-                ss << "snapshots/network.ann." << ((int)(100*10000*final_error)/10000.0f);
-                dump_to_file(ss.str());
+                stop_training = false;
+                break;
             }
-
-            if(stop_training){stop_training=false;break;}
-
-            // MARK!!!
-            //if(error/n_elements < 0.05 && iter > n_iterations)
-            //{
-            //  std::stringstream ss;
-            //  ss << "snapshots/network.ann." << ((int)(100*10000*final_error)/10000.0f);
-            //  dump_to_file(ss.str());
-            //  dump_to_file("network.ann");
-            //  exit(1);
-            //}
-
-            //char ch;
-            //std::cin >> ch;
 
         }
     }
-
-    T final_error;
 
 };
 

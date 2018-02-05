@@ -11,5 +11,4 @@ mkdir "networks/$1";
 mkdir "snapshots/$1";
 mkdir "src/projects/$1";
 touch "src/projects/$1/main.cpp";
-touch "src/projects/$1/Makefile";
 

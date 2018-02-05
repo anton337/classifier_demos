@@ -10,5 +10,5 @@ echo "Running project $PROJECT"
 
 cd $PROJECT_HOME/demo/$PROJECT/
 
-./run.sh
+./debug.sh
 
