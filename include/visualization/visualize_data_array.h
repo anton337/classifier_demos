@@ -1,5 +1,5 @@
-#ifndef VISUALIZE_DATA_ARRAY
-#define VISUALIZE_DATA_ARRAY
+#ifndef VISUALIZE_DATA_ARRAY_H
+#define VISUALIZE_DATA_ARRAY_H
 
 double * viz_dat = NULL;
 

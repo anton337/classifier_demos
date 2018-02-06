@@ -4,9 +4,17 @@
 #include <unistd.h>
 #include <GL/glut.h>
 #include "visualize_data_array.h"
+#include "visualize_model_output.h"
 
 void draw(void)
 {
+
+#ifdef VISUALIZE_SIGNAL
+    visualize_signal ( sig_elems , sig_dat );
+    visualize_reconstruction ( sig_perceptron , sig_elems , sig_dat , sig_prct , sig_num_in , sig_start_elem );
+#endif
+
+#ifdef VISUALIZE_DATA_ARRAY
     viz_selection++;
     if(viz_selection*n_vars >= n_elems)
     {
@@ -19,6 +27,15 @@ void draw(void)
                          , n_y
                          , viz_dat
                          );
+#endif
+
+#ifdef VISUALIZE_MODEL_OUTPUT
+    visualize_model_output ( mod_perceptron
+                           , mod_min_x , mod_max_x , mod_n_x
+                           , mod_min_y , mod_max_y , mod_n_y
+                           );
+#endif
+
 }
 
 void display(void)

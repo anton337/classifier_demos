@@ -1,5 +1,6 @@
 #include <iostream>
 #include <boost/thread.hpp>
+#define VISUALIZE_DATA_ARRAY
 #include "visualization.h"
 #include "readBMP.h"
 #include "Perceptron.h"

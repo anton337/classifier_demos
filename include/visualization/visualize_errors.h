@@ -1,5 +1,5 @@
-#ifndef VISUALIZE_ERRORS
-#define VISUALIZE_ERRORS
+#ifndef VISUALIZE_ERRORS_H
+#define VISUALIZE_ERRORS_H
 
 template<typename T>
 void visualize_errors ( std::vector<T> errs )

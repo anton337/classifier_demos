@@ -46,6 +46,6 @@ URL="$BASE_URL&crumb=$crumb"
 log "URL: $URL"
 
 # Download to 
-curl -s --cookie $cookieJar  $URL > data/$SYMBOL.csv
+curl -s --cookie $cookieJar  $URL > $SYMBOL.csv
 
-echo "Data downloaded to data/$SYMBOL.csv"
+echo "Data downloaded to $SYMBOL.csv"
