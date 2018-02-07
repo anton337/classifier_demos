@@ -35,6 +35,10 @@ void visualize_data_array ( long selection
                           , long nx
                           , long ny
                           , T * dat
+                          , T min_x = -1
+                          , T max_x = 1
+                          , T min_y = -1
+                          , T max_y = 1
                           )
 {
 
@@ -63,8 +67,8 @@ void visualize_data_array ( long selection
     }
     
     float val;
-    T dx = 2.0/nx;
-    T dy = 2.0/ny;
+    T dx = (max_x-min_x)/nx;
+    T dy = (max_y-min_y)/ny;
     glBegin(GL_QUADS);
     for(long y=0,k=selection*num_vars;y<ny;y++)
     {
@@ -72,20 +76,20 @@ void visualize_data_array ( long selection
         {
             val = dat[k];
             glColor3f(val,val,val);
-            glVertex3f( -1 + dx*x
-                      , -1 + dy*y
+            glVertex3f( min_x + dx*x
+                      , min_y + dy*y
                       , 0
                       );
-            glVertex3f( -1 + dx*(x+1)
-                      , -1 + dy*y
+            glVertex3f( min_x + dx*(x+1)
+                      , min_y + dy*y
                       , 0
                       );
-            glVertex3f( -1 + dx*(x+1)
-                      , -1 + dy*(y+1)
+            glVertex3f( min_x + dx*(x+1)
+                      , min_y + dy*(y+1)
                       , 0
                       );
-            glVertex3f( -1 + dx*x
-                      , -1 + dy*(y+1)
+            glVertex3f( min_x + dx*x
+                      , min_y + dy*(y+1)
                       , 0
                       );
         }

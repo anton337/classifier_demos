@@ -13,11 +13,14 @@ struct Image {
     unsigned long sizeX;
     unsigned long sizeY;
     char *data;
-    double * get_doubles(int nx,int ny) 
+    long size;
+    long get_size(){return size;}
+    double * get_doubles(int nx,int ny,int dx=1,int dy=1) 
     {
-        double * ret = new double[sizeX*sizeY];
-        long NX = sizeX/nx;
-        long NY = sizeY/ny;
+        long NX = dx*sizeX/nx-(dx-1);
+        long NY = dy*sizeY/ny-(dy-1);
+        size = NX*NY*nx*ny;
+        double * ret = new double[size];
         for(int Y=0,K=0,k=0;Y<NY;Y++)
         {
             for(int X=0;X<NX;X++,K++)
@@ -27,12 +30,8 @@ struct Image {
                     {
                         for(int x=0;x<nx;x++,k++)
                         {
-                            //if(K/(100*5)==3)
-                                //std::cout << (((unsigned char)data[3*(sizeX*((NY-1-Y)*ny+(ny-1-y))+X*nx+x)]>127)?'#':' ');
-                            ret[k] =  (double)((unsigned char)data[3*(sizeX*((NY-1-Y)*ny+      y )+X*nx+x)]/256.0);
+                            ret[k] =  (double)((unsigned char)data[3*(sizeX*((NY-1-Y)*(ny/dy)+      y )+X*(nx/dx)+x)]/256.0);
                         }
-                        //if(K/(100*5)==3)
-                            //std::cout << std::endl;
                     }
                 }
             }
