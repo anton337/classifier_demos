@@ -84,7 +84,7 @@ struct gradient_info
 };
 
 template<typename T>
-void gradient_worker(gradient_info * g,std::vector<long> const & vrtx)
+void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
 {
   T factor = 1.0f / g->n;
   T factorv= 1.0f / (g->v*g->v);
@@ -155,6 +155,10 @@ void hid2vis_worker(const T * H,T * V,long h,long v,T * b,T * W,std::vector<long
 template<typename T>
 struct RBM
 {
+
+  std::vector<T> errs;
+  std::vector<T> test_errs;
+
   long h; // number hidden elements
   long v; // number visible elements
   long n; // number of samples
@@ -204,9 +208,9 @@ struct RBM
     c = new T[h];
     b = new T[v];
     W = new T[h*v];
-    constant(c,0.5f,h);
-    constant(b,0.5f,v);
-    constant(W,0.5f,v*h);
+    constant<T>(c,0.5f,h);
+    constant<T>(b,0.5f,v);
+    constant<T>(W,0.5f,v*h);
 
     vis0 = NULL;
     hid0 = NULL;
@@ -319,12 +323,12 @@ struct RBM
     boost::posix_time::time_duration duration43(time_4 - time_3);
     //std::cout << "cd timing 4:" << duration43 << '\n';
     *err = sqrt(*err);
-    for(int t=2;t<3&&t<errs.size();t++)
-      *err += (errs[errs.size()+1-t]-*err)/t;
+    //for(int t=2;t<3&&t<errs.size();t++)
+    //  *err += (errs[errs.size()+1-t]-*err)/t;
     errs.push_back(*err);
     test_errs.push_back(*err);
     static int cnt2 = 0;
-    if(cnt2%100==0)
+    //if(cnt2%100==0)
     std::cout << "rbm error=" << *err << std::endl;
     cnt2++;
     boost::posix_time::ptime time_5(boost::posix_time::microsec_clock::local_time());
@@ -399,7 +403,7 @@ struct RBM
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
-      threads.push_back(new boost::thread(vis2hid_worker,X,H,h,v,c,W,vrtx[thread]));
+      threads.push_back(new boost::thread(vis2hid_worker<T>,X,H,h,v,c,W,vrtx[thread]));
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
@@ -416,7 +420,7 @@ struct RBM
 
     std::vector<boost::thread*> threads;
     std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
-    std::vector<gradient_info*> g;
+    std::vector<gradient_info<T>*> g;
 
     boost::posix_time::ptime time_1(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration10(time_1 - time_0);
@@ -431,7 +435,7 @@ struct RBM
     //std::cout << "gradient update timing 2:" << duration21 << '\n';
     for(long i=0;i<vrtx.size();i++)
     {
-      g.push_back(new gradient_info());
+      g.push_back(new gradient_info<T>());
     }
     boost::posix_time::ptime time_3(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration32(time_3 - time_2);
@@ -449,7 +453,7 @@ struct RBM
       g[thread]->dc = dc;
       g[thread]->db = db;
       g[thread]->init();
-      threads.push_back(new boost::thread(gradient_worker,g[thread],vrtx[thread]));
+      threads.push_back(new boost::thread(gradient_worker<T>,g[thread],vrtx[thread]));
     }
     boost::posix_time::ptime time_4(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration43(time_4 - time_3);
@@ -481,7 +485,7 @@ struct RBM
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
-      threads.push_back(new boost::thread(hid2vis_worker,H,V,h,v,b,W,vrtx[thread]));
+      threads.push_back(new boost::thread(hid2vis_worker<T>,H,V,h,v,b,W,vrtx[thread]));
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {

@@ -14,7 +14,7 @@ Perceptron<double> * perceptron = NULL;
 double * dat = NULL;
 double * prct = NULL;
 long num_elems = -1;
-long num_in = 26;
+long num_in = 5;
 
 template<typename T>
 void test_signal_tracking(T * prct,long num_in,long num_elems)
@@ -52,9 +52,9 @@ void test_signal_tracking(T * prct,long num_in,long num_elems)
     val = (val>1)?1:val;
     out_dat[i] = val;
   }
-  perceptron -> alpha = .1;
+  perceptron -> alpha = 1;
   perceptron -> sigmoid_type = 1;
-  perceptron -> train(0,.1,100000,num,dim,1,in_dat,out_dat,true);
+  perceptron -> train(0,.1,1000000,num,dim,1,in_dat,out_dat,true);
 }
 
 int main(int argc,char ** argv)
@@ -65,7 +65,7 @@ int main(int argc,char ** argv)
     if(argc>0)
     {
       csvReader<double> csv_reader;
-      dat = csv_reader.read_data_floating_point(argv[1],5,1000);
+      dat = csv_reader.read_data_floating_point(argv[1],5,300);
       num_elems = csv_reader.get_size();
       prct = calculate_percent_change(dat,num_elems);
     }
