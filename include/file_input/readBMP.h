@@ -15,8 +15,29 @@ struct Image {
     char *data;
     long size;
     long width;
-    long get_size(){return size;}
-    long get_width(){return width;}
+    long get_size()
+    {
+        if(size==0)
+        {
+            std::cout << "call get_doubles(), size not initialized." << std::endl;
+            exit(1);
+        }
+        return size;
+    }
+    long get_width()
+    {
+        if(width==0)
+        {
+            std::cout << "call get_doubles(), width not initialized." << std::endl;
+            exit(1);
+        }
+        return width;
+    }
+    Image()
+    {
+        size = 0;
+        width = 0;
+    }
     double * get_doubles(int nx,int ny,int dx=1,int dy=1) 
     {
         long NX = dx*sizeX/nx-(dx-1);

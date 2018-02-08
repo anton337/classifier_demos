@@ -6,15 +6,43 @@
 #include "visualize_data_array.h"
 #include "visualize_model_output.h"
 #include "visualize_rbm_reconstruction.h"
+#include "visualize_activation_probe.h"
 
 bool change_pos_index = false;
 bool change_neg_index = false;
 bool change_up_index = false;
 bool change_down_index = false;
 
+std::vector < Display < double > * > displays;
+
+template<typename T>
+void addDisplay(Display<T> * display)
+{
+    displays.push_back(display);
+}
+
 void draw(void)
 {
 
+    for(long i=0;i<displays.size();i++)
+    {
+        displays[i] -> signal ( change_pos_index
+                              , change_neg_index
+                              , change_up_index
+                              , change_down_index
+                              );
+    }
+
+    for(long i=0;i<displays.size();i++)
+    {
+        displays[i] -> update ();
+    }
+
+#if 0
+
+#ifdef VISUALIZE_ACTIVATION_PROBE
+
+#endif
 
 #ifdef VISUALIZE_RBM_RECONSTRUCTION
     if(change_pos_index)
@@ -122,6 +150,8 @@ void draw(void)
                            );
 #endif
 
+#endif
+
     change_pos_index = false;
     change_neg_index = false;
     change_up_index = false;
@@ -138,7 +168,7 @@ void display(void)
 
 void idle(void)
 {
-  usleep(10000);
+  usleep(100);
   glutPostRedisplay();
 }
 

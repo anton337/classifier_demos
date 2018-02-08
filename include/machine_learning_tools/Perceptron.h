@@ -1011,13 +1011,13 @@ struct Perceptron
                 weights_neuron[layer][i] = new T[n_nodes[layer]];
                 for(long j=0;j<n_nodes[layer];j++)
                 {
-                    weights_neuron[layer][i][j] = 1.0 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
+                    weights_neuron[layer][i][j] = 1.0e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
                 }
             }
             weights_bias[layer] = new T[n_nodes[layer+1]];
             for(long i=0;i<n_nodes[layer+1];i++)
             {
-                weights_bias[layer][i] = 1.0 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
+                weights_bias[layer][i] = 1.0e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
             }
         }
 
