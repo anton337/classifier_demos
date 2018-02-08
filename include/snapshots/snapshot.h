@@ -12,7 +12,7 @@
     {
         if(!quiet)
           std::cout << "dump to file:" << filename << std::endl;
-        std::ofstream myfile (filename.c_str());
+        std::ofstream myfile (filename.c_str(),std::ios::out);
         if (myfile.is_open())
         {
           myfile << "#v" << std::endl;
@@ -150,7 +150,7 @@
     {
         if(!quiet)
           std::cout << "dump to file:" << filename << std::endl;
-        std::ofstream myfile (filename.c_str());
+        std::ofstream myfile (filename.c_str(),std::ios::out);
         if (myfile.is_open())
         {
           myfile << "#n_nodes" << std::endl;
