@@ -13,6 +13,8 @@ long rbm_elems = 0;
 
 long rbm_vars = 0;
 
+long rbm_stride = 0;
+
 long rbm_nx = 0;
 
 long rbm_ny = 0;
@@ -23,6 +25,7 @@ template<typename T>
 void set_rbm_data ( std::vector < RBM<T> * > rbm
                   , long num_elems
                   , long num_vars
+                  , long stride
                   , long nx
                   , long ny
                   , T * dat
@@ -31,6 +34,7 @@ void set_rbm_data ( std::vector < RBM<T> * > rbm
     viz_rbm = rbm;
     rbm_elems = num_elems;
     rbm_vars  = num_vars;
+    rbm_stride = stride;
     rbm_nx = nx;
     rbm_ny = ny;
     rbm_dat = dat;

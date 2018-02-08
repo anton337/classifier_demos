@@ -5,6 +5,7 @@
 #include "visualization.h"
 #include "readBMP.h"
 #include "RBM.h"
+#include "snapshot.h"
 
 RBM<double> * rbm = NULL;
 RBM<double> * rbm1 = NULL;
@@ -82,22 +83,23 @@ int main(int argc,char ** argv)
       Image * dat = new Image();
       ImageLoad(argv[1],dat);
       // 860 x 615
-      long nx = 20;//43;//860;//20;
-      long ny = 15;//41;//615;//15;
-      long dx = 4;
-      long dy = 3;
-      //long nx = 50;
-      //long ny = 50;
-      //long dx = 5;
-      //long dy = 5;
+      //long nx = 20;//43;//860;//20;
+      //long ny = 15;//41;//615;//15;
+      //long dx = 4;
+      //long dy = 3;
+      long nx = 10;
+      long ny = 10;
+      long dx = 2;
+      long dy = 2;
       double * D = dat->get_doubles(nx,ny,dx,dy);
       set_viz_data ( dat->get_size()
                    , nx*ny
+                   , dat->get_width()
                    , nx
                    , ny
                    , D
                    );
-      rbm = new RBM<double>(nx*ny,2*nx*ny,dat->get_size()/(nx*ny),D);
+      rbm = new RBM<double>(nx*ny,8*nx*ny,dat->get_size()/(nx*ny),D);
       double * D1 = new double[rbm->n*rbm->h];
       rbm1 = new RBM<double>(rbm -> h, rbm -> h*0.75, rbm -> n, D1);
       double * D2 = new double[rbm1->n*rbm1->h];
@@ -114,6 +116,7 @@ int main(int argc,char ** argv)
       set_rbm_data ( rbms
                    , dat->get_size()
                    , nx*ny
+                   , dat->get_width()
                    , nx
                    , ny
                    , D

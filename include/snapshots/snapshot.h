@@ -1,60 +1,208 @@
 #ifndef SNAPSHOT_H
 #define SNAPSHOT_H
 
+#include <fstream>
+#include <iostream>
 
-    void dump_to_file(std::string filename,bool quiet=false)
+    template<typename T>
+    void dump_to_file ( RBM<T> * rbm
+                      , std::string filename
+                      , bool quiet=false
+                      )
     {
         if(!quiet)
           std::cout << "dump to file:" << filename << std::endl;
-        ofstream myfile (filename.c_str());
+        std::ofstream myfile (filename.c_str());
         if (myfile.is_open())
         {
-          myfile << "#n_nodes" << std::endl;
-          myfile << n_nodes.size() << " ";
-          for(int i=0;i<n_nodes.size();i++)
+          myfile << "#v" << std::endl;
+          myfile << rbm->v << std::endl;
+          myfile << "#h" << std::endl;
+          myfile << rbm->h << std::endl;
+          myfile << "#b" << std::endl;
+          for(long v=0;v<rbm->v;v++)
           {
-            myfile << n_nodes[i] << " ";
+            myfile << rbm->b[v] << " ";
           }
           myfile << std::endl;
-          myfile << "#bias" << std::endl;
-          for(int layer = 0;layer < n_layers;layer++)
+          myfile << "#c" << std::endl;
+          for(long h=0;h<rbm->h;h++)
           {
-            for(long i=0;i<n_nodes[layer+1];i++)
-            {
-              myfile << (float)weights_bias[layer][i] << " ";
-            }
-            std::cout << " ";
+            myfile << rbm->c[h] << " ";
           }
           myfile << std::endl;
-          myfile << "#weights" << std::endl;
-          for(int layer = 0;layer < n_layers;layer++)
+          myfile << "#W" << std::endl;
+          for(long k=0;k<rbm->h*rbm->v;k++)
           {
-            for(int i=0;i<n_nodes[layer+1];i++)
-            {
-                for(int j=0;j<n_nodes[layer];j++)
-                {
-                    myfile << (float)weights_neuron[layer][i][j] << " ";
-                }
-            }
+            myfile << rbm->W[k] << " ";
           }
           myfile << std::endl;
-          myfile << "#error" << std::endl;
-          myfile << final_error << std::endl;
           myfile.close();
         }
         else
         {
-          cout << "Unable to open file: " << filename << std::endl;
+          std::cout << "Unable to open file: " << filename << std::endl;
           exit(1);
         }
 
     }
 
-    void load_from_file(std::string filename,bool quiet=false)
+    template<typename T>
+    void load_from_file ( RBM<T> * rbm
+                        , std::string filename
+                        , bool quiet=false
+                        )
     {
         if(!quiet)
           std::cout << "loading from file:" << filename << std::endl;
-        ifstream myfile (filename.c_str());
+        std::ifstream myfile (filename.c_str());
+        if (myfile.is_open())
+        {
+
+          std::string line;
+          std::string tmp;
+          int stage = 0;
+          bool done = false;
+          while(!done&&getline(myfile,line))
+          {
+            if(line[0] == '#')continue;
+            switch(stage)
+            {
+              case 0: // get v
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int v = atoi(tmp.c_str());
+                if(v != rbm->v)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 1;
+                break;
+              }
+              case 1: // get h
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int h = atoi(tmp.c_str());
+                if(h != rbm->h)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 2;
+                break;
+              }
+              case 2: // get b
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<rbm->v;j++)
+                {
+                    ss >> tmp;
+                    rbm->b[j] = atof(tmp.c_str());
+                }
+                stage = 3;
+                break;
+              }
+              case 3: // get c
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<rbm->h;j++)
+                {
+                    ss >> tmp;
+                    rbm->c[j] = atof(tmp.c_str());
+                }
+                stage = 4;
+                break;
+              }
+              case 4: // get W
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<rbm->h*rbm->v;j++)
+                {
+                    ss >> tmp;
+                    rbm->W[j] = atof(tmp.c_str());
+                }
+                stage = 5;
+                break;
+              }
+              default:done = true;break;
+            }
+          }
+
+          myfile.close();
+        }
+        else std::cout << "Unable to open file: " << filename << std::endl;
+
+    }
+
+    template<typename T>
+    void dump_to_file ( Perceptron<T> * perceptron
+                      , std::string filename
+                      , bool quiet=false
+                      )
+    {
+        if(!quiet)
+          std::cout << "dump to file:" << filename << std::endl;
+        std::ofstream myfile (filename.c_str());
+        if (myfile.is_open())
+        {
+          myfile << "#n_nodes" << std::endl;
+          myfile << perceptron->n_nodes.size() << " ";
+          for(int i=0;i<perceptron->n_nodes.size();i++)
+          {
+            myfile << perceptron->n_nodes[i] << " ";
+          }
+          myfile << std::endl;
+          myfile << "#bias" << std::endl;
+          for(int layer = 0;layer < perceptron->n_layers;layer++)
+          {
+            for(long i=0;i<perceptron->n_nodes[layer+1];i++)
+            {
+              myfile << (float)perceptron->weights_bias[layer][i] << " ";
+            }
+            std::cout << " ";
+          }
+          myfile << std::endl;
+          myfile << "#weights" << std::endl;
+          for(int layer = 0;layer < perceptron->n_layers;layer++)
+          {
+            for(int i=0;i<perceptron->n_nodes[layer+1];i++)
+            {
+                for(int j=0;j<perceptron->n_nodes[layer];j++)
+                {
+                    myfile << (float)perceptron->weights_neuron[layer][i][j] << " ";
+                }
+            }
+          }
+          myfile << std::endl;
+          myfile << "#error" << std::endl;
+          myfile << perceptron->final_error << std::endl;
+          myfile.close();
+        }
+        else
+        {
+          std::cout << "Unable to open file: " << filename << std::endl;
+          exit(1);
+        }
+
+    }
+
+    template<typename T>
+    void load_from_file ( Perceptron<T> * perceptron
+                        , std::string filename
+                        , bool quiet=false
+                        )
+    {
+        if(!quiet)
+          std::cout << "loading from file:" << filename << std::endl;
+        std::ifstream myfile (filename.c_str());
         if (myfile.is_open())
         {
           std::string line;
@@ -73,7 +221,7 @@
                 int n_nodes_size;
                 ss >> tmp;
                 n_nodes_size = atoi(tmp.c_str());
-                if(n_nodes_size != n_nodes.size())
+                if(n_nodes_size != perceptron->n_nodes.size())
                 {
                   std::cout << "network structure is not consistent." << std::endl;
                   exit(1);
@@ -83,7 +231,7 @@
                   int layer_size;
                   ss >> tmp;
                   layer_size = atoi(tmp.c_str());
-                  if(layer_size != n_nodes[i])
+                  if(layer_size != perceptron->n_nodes[i])
                   {
                     std::cout << "network structure is not consistent." << std::endl;
                     exit(1);
@@ -96,12 +244,12 @@
               {
                 std::stringstream ss;
                 ss << line;
-                for(int layer = 0;layer < n_layers;layer++)
+                for(int layer = 0;layer < perceptron->n_layers;layer++)
                 {
-                  for(long i=0;i<n_nodes[layer+1];i++)
+                  for(long i=0;i<perceptron->n_nodes[layer+1];i++)
                   {
                     ss >> tmp;
-                    weights_bias[layer][i] = atof(tmp.c_str());
+                    perceptron->weights_bias[layer][i] = atof(tmp.c_str());
                   }
                 }
                 stage = 2;
@@ -111,14 +259,14 @@
               {
                 std::stringstream ss;
                 ss << line;
-                for(int layer = 0;layer < n_layers;layer++)
+                for(int layer = 0;layer < perceptron->n_layers;layer++)
                 {
-                  for(int i=0;i<n_nodes[layer+1];i++)
+                  for(int i=0;i<perceptron->n_nodes[layer+1];i++)
                   {
-                      for(int j=0;j<n_nodes[layer];j++)
+                      for(int j=0;j<perceptron->n_nodes[layer];j++)
                       {
                           ss >> tmp;
-                          weights_neuron[layer][i][j] = atof(tmp.c_str());
+                          perceptron->weights_neuron[layer][i][j] = atof(tmp.c_str());
                       }
                   }
                 }
@@ -130,7 +278,7 @@
                 std::stringstream ss;
                 ss << line;
                 ss >> tmp;
-                final_error = atof(tmp.c_str());
+                perceptron->final_error = atof(tmp.c_str());
                 stage = 4;
                 break;
               }
@@ -139,7 +287,7 @@
           }
           myfile.close();
         }
-        else cout << "Unable to open file: " << filename << std::endl;
+        else std::cout << "Unable to open file: " << filename << std::endl;
 
     }
 

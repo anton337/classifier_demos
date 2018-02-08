@@ -9,6 +9,8 @@
 
 bool change_pos_index = false;
 bool change_neg_index = false;
+bool change_up_index = false;
+bool change_down_index = false;
 
 void draw(void)
 {
@@ -26,6 +28,22 @@ void draw(void)
     if(change_neg_index)
     {
         rbm_selection--;
+        if(rbm_selection < 0)
+        {
+            rbm_selection = 0;
+        }
+    }
+    if(change_down_index)
+    {
+        rbm_selection+=rbm_stride;
+        if(rbm_selection*rbm_vars >= rbm_elems)
+        {
+            rbm_selection = 0;
+        }
+    }
+    if(change_up_index)
+    {
+        rbm_selection-=rbm_stride;
         if(rbm_selection < 0)
         {
             rbm_selection = 0;
@@ -68,6 +86,22 @@ void draw(void)
             viz_selection = 0;
         }
     }
+    if(change_down_index)
+    {
+        viz_selection+=n_stride;
+        if(viz_selection*n_vars >= n_elems)
+        {
+            viz_selection = 0;
+        }
+    }
+    if(change_up_index)
+    {
+        viz_selection-=n_stride;
+        if(viz_selection < 0)
+        {
+            viz_selection = 0;
+        }
+    }
     visualize_data_array < double > ( viz_selection
                                     , n_elems
                                     , n_vars
@@ -90,6 +124,8 @@ void draw(void)
 
     change_pos_index = false;
     change_neg_index = false;
+    change_up_index = false;
+    change_down_index = false;
 
 }
 
@@ -128,6 +164,8 @@ void keyboard(unsigned char Key, int x, int y)
   {
     case 'd':change_pos_index=true;break;
     case 'a':change_neg_index=true;break;
+    case 'w':change_up_index=true;break;
+    case 's':change_down_index=true;break;
     case 27:
       {
         exit(1);

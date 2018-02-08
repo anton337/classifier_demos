@@ -14,11 +14,14 @@ struct Image {
     unsigned long sizeY;
     char *data;
     long size;
+    long width;
     long get_size(){return size;}
+    long get_width(){return width;}
     double * get_doubles(int nx,int ny,int dx=1,int dy=1) 
     {
         long NX = dx*sizeX/nx-(dx-1);
         long NY = dy*sizeY/ny-(dy-1);
+        width = NX;
         size = NX*NY*nx*ny;
         double * ret = new double[size];
         for(int Y=0,K=0,k=0;Y<NY;Y++)

@@ -9,6 +9,8 @@ long n_elems = 0;
 
 long n_vars = 0;
 
+long n_stride = 0;
+
 long n_x = 0;
 
 long n_y = 0;
@@ -16,6 +18,7 @@ long n_y = 0;
 template<typename T>
 void set_viz_data ( long num_elems
                   , long num_vars
+                  , long stride
                   , long nx
                   , long ny
                   , T * dat
@@ -23,6 +26,7 @@ void set_viz_data ( long num_elems
 {
     n_elems = num_elems;
     n_vars  = num_vars;
+    n_stride = stride;
     n_x = nx;
     n_y = ny;
     viz_dat = dat;

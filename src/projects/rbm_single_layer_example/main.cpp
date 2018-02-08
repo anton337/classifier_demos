@@ -1,12 +1,14 @@
 #include <iostream>
 #include <boost/thread.hpp>
-//#define VISUALIZE_DATA_ARRAY
+#define VISUALIZE_DATA_ARRAY
 #define VISUALIZE_RBM_RECONSTRUCTION
 #include "visualization.h"
 #include "readBMP.h"
 #include "RBM.h"
 
 RBM<double> * rbm = NULL;
+
+std::vector<RBM<double> * > rbms;
 
 // learns to classify hand written digits
 void test_rbm_mnist()
@@ -31,14 +33,15 @@ int main(int argc,char ** argv)
       long nx = 20;
       long ny = 20;
       double * D = dat->get_doubles(nx,ny);
-      //set_viz_data ( nx*ny*10*5*100
-      //             , nx*ny
-      //             , nx
-      //             , ny
-      //             , D
-      //             );
+      set_viz_data ( nx*ny*10*5*100
+                   , nx*ny
+                   , nx
+                   , ny
+                   , D
+                   );
       rbm = new RBM<double>(nx*ny,nx*ny,10*5*100,D);
-      set_rbm_data ( rbm
+      rbms.push_back(rbm);
+      set_rbm_data ( rbms
                    , nx*ny*10*5*100
                    , nx*ny
                    , nx
