@@ -64,7 +64,7 @@ void test_mnist()
       }
     }
     //perceptrons[J] -> train(0,.01,1000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
-    perceptron -> train(0,0.01,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
+    perceptron -> train(0,1.0,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
     std::stringstream ss;
     //ss << output_dir << "/mnist-" << J << ".ann";
     ss << output_dir << "/mnist.ann";

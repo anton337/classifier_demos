@@ -914,7 +914,6 @@ void training_worker(bool snapshot,long n_threads,long iter,training_info<T> * g
                 }
                 partial_error += fabs(g->deltas[last_layer+1][i]);
             }
-            g->partial_error += partial_error;
             // back propagation
             for(long layer = g->n_layers-1; layer >= 0; layer--)
             {
@@ -990,7 +989,6 @@ void training_worker(bool snapshot,long n_threads,long iter,training_info<T> * g
                 }
                 partial_error += fabs(g->deltas[last_layer+1][i]);
             }
-            g->partial_error += partial_error;
             // back propagation
             for(long layer = g->n_layers-1; layer >= 0; layer--)
             {
@@ -1383,8 +1381,9 @@ struct Perceptron
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->reset();
-              threads.push_back(new boost::thread(training_worker<T>,iter%10000==0,vrtx.size(),iter,g[thread],vrtx[thread],variables,labels));
+              threads.push_back(new boost::thread(training_worker<T>,iter%100==0,vrtx.size(),iter,g[thread],vrtx[thread],variables,labels));
             }
+            usleep(10000);
             for(long thread=0;thread<vrtx.size();thread++)
             {
               threads[thread]->join();
@@ -1409,7 +1408,7 @@ struct Perceptron
                 final_error = verify(n_test_elements,n_variables,test_variables,n_labels,test_labels);
             }
             static int cnt1 = 0;
-            if(cnt1%100==0)
+            if(cnt1%100==0 && error > 1e-20)
             std::cout << iter << "\tquasi newton=" << ((quasi_newton!=NULL)?(quasi_newton->quasi_newton_update?"true":"false"):"NULL") << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/n_elements << "\ttest\%error=" << 100*final_error << "\tindex=" << index/n_elements << std::endl;
             cnt1++;
             perror = error;
