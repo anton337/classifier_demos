@@ -1381,7 +1381,15 @@ struct Perceptron
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->reset();
-              threads.push_back(new boost::thread(training_worker<T>,iter%100==0,vrtx.size(),iter,g[thread],vrtx[thread],variables,labels));
+              threads.push_back ( new boost::thread ( training_worker<T>
+                                                    , true // iter%100==0
+                                                    , vrtx.size()
+                                                    , iter,g[thread]
+                                                    , vrtx[thread]
+                                                    , variables
+                                                    , labels
+                                                    )
+                                );
             }
             usleep(10000);
             for(long thread=0;thread<vrtx.size();thread++)

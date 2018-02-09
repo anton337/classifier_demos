@@ -38,7 +38,7 @@ void model()
             max_val=out[i];
           }
         }
-        //std::cout << "ans:" << max_i << std::endl;
+        std::cout << "ans:" << max_i << std::endl;
         delete [] out;
         usleep(10000);
     }
