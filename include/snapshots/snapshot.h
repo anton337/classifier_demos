@@ -223,7 +223,7 @@
                 n_nodes_size = atoi(tmp.c_str());
                 if(n_nodes_size != perceptron->n_nodes.size())
                 {
-                  std::cout << "network structure is not consistent." << std::endl;
+                  std::cout << "network structure is not consistent: " << n_nodes_size << " " << perceptron->n_nodes.size() << std::endl;
                   exit(1);
                 }
                 for(int i=0;i<n_nodes_size;i++)
@@ -233,7 +233,7 @@
                   layer_size = atoi(tmp.c_str());
                   if(layer_size != perceptron->n_nodes[i])
                   {
-                    std::cout << "network structure is not consistent." << std::endl;
+                    std::cout << "network structure is not consistent: " << layer_size << " " << perceptron->n_nodes[i] << std::endl;
                     exit(1);
                   }
                 }

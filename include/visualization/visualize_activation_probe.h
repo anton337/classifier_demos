@@ -123,9 +123,10 @@ struct VisualizeActivationProbe : public Display < T >
                 {
                     for(long ix=0;ix<activation_probe->input_grid_nx;ix++,k++)
                     {
-                        val  = 0.5f + activation_probe ->  input_dat [ k ] ;
+                        val  = activation_probe ->  input_dat [ k ] ;
                         val2 = activation_probe -> output_dat [ o ] ;
-                        glColor3f(val,val,val2);
+                        val += 0.5*val2;
+                        glColor3f(val,val,val);
                         glVertex3f( min_x + (max_x-min_x)*(out_dx * ox + out_dx * in_dx* ix     )
                                   , min_y + (max_y-min_y)*(out_dy * oy + out_dy * in_dy* iy     )
                                   , 0

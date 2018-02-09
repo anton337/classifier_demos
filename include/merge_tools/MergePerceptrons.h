@@ -8,7 +8,7 @@ template<typename T>
 struct MergePerceptrons
 {
 
-    Perceptron < T > * merge ( std::vector < Perceptron < T > > * in )
+    Perceptron < T > * merge ( std::vector < Perceptron < T > * > in )
     {
 
         if(in.size()==0)
@@ -57,17 +57,45 @@ struct MergePerceptrons
 
         for(long layer = 0;layer < out->n_layers;layer++)
         {
-            for(long n=0,I=0;n<in.size();n++)
+            std::cout << "layer:" << layer << std::endl;
+            if(layer==0)
             {
-                for(long i=0;i<in[n]->n_nodes[layer+1];i++,I++)
+                for(long n=0,I=0;n<in.size();n++)
                 {
-                    for(long j=0;j<in[n]->n_nodes[layer];j++)
+                    for(long i=0;i<in[n]->n_nodes[layer+1];i++,I++)
                     {
-                        out->weights_neuron[layer][I][j] = in[n]->weights_neuron[layer][i][j];
+                        for(long j=0;j<in[n]->n_nodes[layer];j++)
+                        {
+                            out->weights_neuron[layer][I][j] = in[n]->weights_neuron[layer][i][j];
+                        }
+                        out->weights_bias[layer][I] = in[n]->weights_bias[layer][i];
                     }
-                    out->weights_bias[layer][I] = in[n]->weights_bias[layer][i];
                 }
             }
+            else
+            {
+                for(long n=0,I=0;n<in.size();n++)
+                {
+                    for(long i=0;i<in[n]->n_nodes[layer+1];i++,I++)
+                    {
+                        for(long m=0,J=0;m<in.size();m++)
+                        {
+                            for(long j=0;j<in[n]->n_nodes[layer];j++,J++)
+                            {
+                                out->weights_neuron[layer][I][J] = (n==m)?in[n]->weights_neuron[layer][i][j]:0;
+                            }
+                        }
+                    }
+                }
+                for(long n=0,I=0;n<in.size();n++)
+                {
+                    for(long i=0;i<in[n]->n_nodes[layer+1];i++,I++)
+                    {
+                        out->weights_bias[layer][I] = in[n]->weights_bias[layer][i];
+                    }
+                }
+            }
+            std::cout << "done" << std::endl;
         }
 
         return out;

@@ -517,6 +517,11 @@ struct training_info
     T *** partial_weights_neuron;
     T **  partial_weights_bias;
 
+    T *** mu_weights_neuron;
+    T **  mu_weights_bias;
+    T *** mu_partial_weights_neuron;
+    T **  mu_partial_weights_bias;
+
     T partial_error;
     T smallest_index;
 
@@ -546,18 +551,53 @@ struct training_info
         }
         partial_weights_neuron = new T**[n_layers];
         partial_weights_bias = new T*[n_layers];
+        mu_partial_weights_neuron = new T**[n_layers];
+        mu_partial_weights_bias = new T*[n_layers];
+        mu_weights_neuron = new T**[n_layers];
+        mu_weights_bias = new T*[n_layers];
         for(long layer = 0;layer < n_layers;layer++)
         {
             partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
+            mu_partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
+            mu_weights_neuron[layer] = new T*[n_nodes[layer+1]];
             for(long i=0;i<n_nodes[layer+1];i++)
             {
                 partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
+                mu_partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
+                mu_weights_neuron[layer][i] = new T[n_nodes[layer]];
+                for(long j=0;j<n_nodes[layer];j++)
+                {
+                    partial_weights_neuron[layer][i][j] = 0;
+                    mu_partial_weights_neuron[layer][i][j] = 0;
+                    mu_weights_neuron[layer][i][j] = 0;
+                }
+            }
+            partial_weights_bias[layer] = new T[n_nodes[layer+1]];
+            mu_partial_weights_bias[layer] = new T[n_nodes[layer+1]];
+            mu_weights_bias[layer] = new T[n_nodes[layer+1]];
+            for(long i=0;i<n_nodes[layer+1];i++)
+            {
+                partial_weights_bias[layer][i] = 0;
+                mu_partial_weights_bias[layer][i] = 0;
+                mu_weights_bias[layer][i] = 0;
+            }
+        }
+    }
+
+    void reset()
+    {
+        type = 0;
+        smallest_index = 0;
+        partial_error = 0;
+        for(long layer = 0;layer < n_layers;layer++)
+        {
+            for(long i=0;i<n_nodes[layer+1];i++)
+            {
                 for(long j=0;j<n_nodes[layer];j++)
                 {
                     partial_weights_neuron[layer][i][j] = 0;
                 }
             }
-            partial_weights_bias[layer] = new T[n_nodes[layer+1]];
             for(long i=0;i<n_nodes[layer+1];i++)
             {
                 partial_weights_bias[layer][i] = 0;
@@ -582,15 +622,25 @@ struct training_info
             for(long i=0;i<n_nodes[layer+1];i++)
             {
                 delete [] partial_weights_neuron[layer][i];
+                delete [] mu_partial_weights_neuron[layer][i];
+                delete [] mu_weights_neuron[layer][i];
             }
             delete [] partial_weights_neuron[layer];
+            delete [] mu_partial_weights_neuron[layer];
+            delete [] mu_weights_neuron[layer];
         }
         delete [] partial_weights_neuron;
+        delete [] mu_partial_weights_neuron;
+        delete [] mu_weights_neuron;
         for(long layer = 0;layer < n_layers;layer++)
         {
             delete [] partial_weights_bias[layer];
+            delete [] mu_partial_weights_bias[layer];
+            delete [] mu_weights_bias[layer];
         }
         delete [] partial_weights_bias;
+        delete [] mu_partial_weights_bias;
+        delete [] mu_weights_bias;
     }
 
     void update_gradient ()
@@ -603,12 +653,12 @@ struct training_info
                 {
                     for(long j=0;j<n_nodes[layer];j++,k++)
                     {
-                        quasi_newton->grad_tmp[k] += partial_weights_neuron[layer][i][j] / n_elements;
+                        quasi_newton->grad_tmp[k] += partial_weights_neuron[layer][i][j];
                     }
                 }
                 for(long i=0;i<n_nodes[layer+1];i++,k++)
                 {
-                    quasi_newton->grad_tmp[k] += partial_weights_bias[layer][i] / n_elements;
+                    quasi_newton->grad_tmp[k] += partial_weights_bias[layer][i];
                 }
             }
         }
@@ -658,12 +708,12 @@ struct training_info
                 {
                     for(long j=0;j<n_nodes[layer];j++,k++)
                     {
-                        weights_neuron[layer][i][j] += partial_weights_neuron[layer][i][j] / n_elements;
+                        weights_neuron[layer][i][j] += epsilon * partial_weights_neuron[layer][i][j];
                     }
                 }
                 for(long i=0;i<n_nodes[layer+1];i++,k++)
                 {
-                    weights_bias[layer][i] += partial_weights_bias[layer][i] / n_elements;
+                    weights_bias[layer][i] += epsilon * partial_weights_bias[layer][i];
                 }
             }
         }
@@ -678,70 +728,320 @@ T min(T a,T b)
 }
 
 template<typename T>
-void training_worker(training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
+void training_worker(bool snapshot,long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
-    for(long n=0;n<vrtx.size();n++)
+    if(snapshot)
     {
-        // initialize input activations
-        for(long i=0;i<g->n_nodes[0];i++)
+        for(long n=0;n<vrtx.size();n++)
         {
-            g->activation_values[0][i] = variables[vrtx[n]*g->n_variables+i];
+            T avg_factor = 1.0 / (1.0 + n);
+            // initialize input activations
+            for(long i=0;i<g->n_nodes[0];i++)
+            {
+                g->activation_values[0][i] = variables[vrtx[n]*g->n_variables+i];
+            }
+            // forward propagation
+            for(long layer = 0; layer < g->n_layers; layer++)
+            {
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    T sum = g->weights_bias[layer][i];
+                    for(long j=0;j<g->n_nodes[layer];j++)
+                    {
+                        sum += g->activation_values[layer][j] * g->weights_neuron[layer][i][j];
+                    }
+                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                }
+            }
+            long last_layer = g->n_nodes.size()-2;
+            // initialize observed labels
+            T partial_error = 0;
+            long max_i = 0;
+            T max_val = 0;
+            for(long i=0;i<g->n_nodes[last_layer];i++)
+            {
+                g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
+                if(fabs(g->deltas[last_layer+1][i])>max_val)
+                {
+                    max_i = i;
+                    max_val = fabs(g->deltas[last_layer+1][i]);
+                }
+            }
+            for(long i=0;i<g->n_nodes[last_layer];i++)
+            {
+                if(i!=max_i)
+                {
+                    //g->deltas[last_layer+1][i] = 0;
+                }
+                partial_error += fabs(g->deltas[last_layer+1][i]);
+            }
+            g->partial_error += partial_error;
+            // back propagation
+            for(long layer = g->n_layers-1; layer >= 0; layer--)
+            {
+                // back propagate deltas
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    g->deltas[layer+1][i] = 0;
+                    for(long j=0;j<g->n_nodes[layer+2];j++)
+                    {
+                        if(layer+1==last_layer)
+                        {
+                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j];
+                        }
+                        else
+                        {
+                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j]*g->weights_neuron[layer+1][j][i];
+                        }
+                    }
+                }
+                // biases
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    g->partial_weights_bias[layer][i] += (g->deltas[layer+1][i] - g->partial_weights_bias[layer][i]) * avg_factor;
+                }
+                // neuron weights
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    for(long j=0;j<g->n_nodes[layer];j++)
+                    {
+                        g->partial_weights_neuron[layer][i][j] += (g->activation_values[layer][j] * g->deltas[layer+1][i] - g->partial_weights_neuron[layer][i][j]) * avg_factor;
+                    }
+                }
+            }
         }
-        // forward propagation
         for(long layer = 0; layer < g->n_layers; layer++)
         {
-            for(long i=0;i<g->n_nodes[layer+1];i++)
-            {
-                T sum = g->weights_bias[layer][i];
-                for(long j=0;j<g->n_nodes[layer];j++)
-                {
-                    sum += g->activation_values[layer][j] * g->weights_neuron[layer][i][j];
-                }
-                g->activation_values[layer+1][i] = sigmoid(sum,g->type);
-            }
-        }
-        long last_layer = g->n_nodes.size()-2;
-        // initialize observed labels
-        T min_partial_error = 0;
-        for(long i=0;i<g->n_nodes[last_layer];i++)
-        {
-            g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
-            min_partial_error += fabs(g->deltas[last_layer+1][i]);
-        }
-        g->partial_error += min_partial_error;
-        // back propagation
-        for(long layer = g->n_layers-1; layer >= 0; layer--)
-        {
-            // back propagate deltas
-            for(long i=0;i<g->n_nodes[layer+1];i++)
-            {
-                g->deltas[layer+1][i] = 0;
-                for(long j=0;j<g->n_nodes[layer+2];j++)
-                {
-                    if(layer+1==last_layer)
-                    {
-                        g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j];
-                    }
-                    else
-                    {
-                        g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j]*g->weights_neuron[layer+1][j][i];
-                    }
-                }
-            }
             // biases
             for(long i=0;i<g->n_nodes[layer+1];i++)
             {
-                g->partial_weights_bias[layer][i] += g->deltas[layer+1][i];
+                g->partial_weights_bias[layer][i] /= n_threads;
             }
             // neuron weights
             for(long i=0;i<g->n_nodes[layer+1];i++)
             {
                 for(long j=0;j<g->n_nodes[layer];j++)
                 {
-                    g->partial_weights_neuron[layer][i][j] += g->activation_values[layer][j] * g->deltas[layer+1][i];
+                    g->partial_weights_neuron[layer][i][j] /= n_threads;
+                }
+            }
+            // biases
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                g->mu_weights_bias[layer][i] = g->weights_bias[layer][i];
+            }
+            // neuron weights
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                for(long j=0;j<g->n_nodes[layer];j++)
+                {
+                    g->mu_weights_neuron[layer][i][j] = g->weights_neuron[layer][i][j];
+                }
+            }
+            // biases
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                g->mu_partial_weights_bias[layer][i] = g->partial_weights_bias[layer][i];
+            }
+            // neuron weights
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                for(long j=0;j<g->n_nodes[layer];j++)
+                {
+                    g->mu_partial_weights_neuron[layer][i][j] = g->partial_weights_neuron[layer][i][j];
+                }
+            }
+
+        }
+    }
+    else
+    {
+        long n = rand()%vrtx.size();
+        for(long layer = 0; layer < g->n_layers; layer++)
+        {
+            // biases
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                g->partial_weights_bias[layer][i] = g->mu_partial_weights_bias[layer][i];
+            }
+            // neuron weights
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                for(long j=0;j<g->n_nodes[layer];j++)
+                {
+                    g->partial_weights_neuron[layer][i][j] = g->mu_partial_weights_neuron[layer][i][j];
                 }
             }
         }
+        {
+            // initialize input activations
+            for(long i=0;i<g->n_nodes[0];i++)
+            {
+                g->activation_values[0][i] = variables[vrtx[n]*g->n_variables+i];
+            }
+            // forward propagation
+            for(long layer = 0; layer < g->n_layers; layer++)
+            {
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    T sum = g->mu_weights_bias[layer][i];
+                    for(long j=0;j<g->n_nodes[layer];j++)
+                    {
+                        sum += g->activation_values[layer][j] * g->mu_weights_neuron[layer][i][j];
+                    }
+                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                }
+            }
+            long last_layer = g->n_nodes.size()-2;
+            // initialize observed labels
+            T partial_error = 0;
+            long max_i = 0;
+            T max_val = 0;
+            for(long i=0;i<g->n_nodes[last_layer];i++)
+            {
+                g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
+                if(fabs(g->deltas[last_layer+1][i])>max_val)
+                {
+                    max_i = i;
+                    max_val = fabs(g->deltas[last_layer+1][i]);
+                }
+            }
+            for(long i=0;i<g->n_nodes[last_layer];i++)
+            {
+                if(i!=max_i)
+                {
+                    //g->deltas[last_layer+1][i] = 0;
+                }
+                partial_error += fabs(g->deltas[last_layer+1][i]);
+            }
+            g->partial_error += partial_error;
+            // back propagation
+            for(long layer = g->n_layers-1; layer >= 0; layer--)
+            {
+                // back propagate deltas
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    g->deltas[layer+1][i] = 0;
+                    for(long j=0;j<g->n_nodes[layer+2];j++)
+                    {
+                        if(layer+1==last_layer)
+                        {
+                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j];
+                        }
+                        else
+                        {
+                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j]*g->mu_weights_neuron[layer+1][j][i];
+                        }
+                    }
+                }
+                // biases
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    g->partial_weights_bias[layer][i] -= g->deltas[layer+1][i];
+                }
+                // neuron weights
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    for(long j=0;j<g->n_nodes[layer];j++)
+                    {
+                        g->partial_weights_neuron[layer][i][j] -= g->activation_values[layer][j] * g->deltas[layer+1][i];
+                    }
+                }
+            }
+        }
+        {
+            // initialize input activations
+            for(long i=0;i<g->n_nodes[0];i++)
+            {
+                g->activation_values[0][i] = variables[vrtx[n]*g->n_variables+i];
+            }
+            // forward propagation
+            for(long layer = 0; layer < g->n_layers; layer++)
+            {
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    T sum = g->weights_bias[layer][i];
+                    for(long j=0;j<g->n_nodes[layer];j++)
+                    {
+                        sum += g->activation_values[layer][j] * g->weights_neuron[layer][i][j];
+                    }
+                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                }
+            }
+            long last_layer = g->n_nodes.size()-2;
+            // initialize observed labels
+            T partial_error = 0;
+            long max_i = 0;
+            T max_val = 0;
+            for(long i=0;i<g->n_nodes[last_layer];i++)
+            {
+                g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
+                if(fabs(g->deltas[last_layer+1][i])>max_val)
+                {
+                    max_i = i;
+                    max_val = fabs(g->deltas[last_layer+1][i]);
+                }
+            }
+            for(long i=0;i<g->n_nodes[last_layer];i++)
+            {
+                if(i!=max_i)
+                {
+                    //g->deltas[last_layer+1][i] = 0;
+                }
+                partial_error += fabs(g->deltas[last_layer+1][i]);
+            }
+            g->partial_error += partial_error;
+            // back propagation
+            for(long layer = g->n_layers-1; layer >= 0; layer--)
+            {
+                // back propagate deltas
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    g->deltas[layer+1][i] = 0;
+                    for(long j=0;j<g->n_nodes[layer+2];j++)
+                    {
+                        if(layer+1==last_layer)
+                        {
+                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j];
+                        }
+                        else
+                        {
+                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j]*g->weights_neuron[layer+1][j][i];
+                        }
+                    }
+                }
+                // biases
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    g->partial_weights_bias[layer][i] += g->deltas[layer+1][i];
+                }
+                // neuron weights
+                for(long i=0;i<g->n_nodes[layer+1];i++)
+                {
+                    for(long j=0;j<g->n_nodes[layer];j++)
+                    {
+                        g->partial_weights_neuron[layer][i][j] += g->activation_values[layer][j] * g->deltas[layer+1][i];
+                    }
+                }
+            }
+        }
+        for(long layer = 0; layer < g->n_layers; layer++)
+        {
+            // biases
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                g->partial_weights_bias[layer][i] /= n_threads;
+            }
+            // neuron weights
+            for(long i=0;i<g->n_nodes[layer+1];i++)
+            {
+                for(long j=0;j<g->n_nodes[layer];j++)
+                {
+                    g->partial_weights_neuron[layer][i][j] /= n_threads;
+                }
+            }
+        }
+
     }
 
 }
@@ -822,146 +1122,6 @@ struct Perceptron
         return I;
     }
 
-    void dump_to_file(std::string filename,bool quiet=false)
-    {
-        if(!quiet)
-          std::cout << "dump to file:" << filename << std::endl;
-        std::ofstream myfile (filename.c_str());
-        if (myfile.is_open())
-        {
-          myfile << "#n_nodes" << std::endl;
-          myfile << n_nodes.size() << " ";
-          for(int i=0;i<n_nodes.size();i++)
-          {
-            myfile << n_nodes[i] << " ";
-          }
-          myfile << std::endl;
-          myfile << "#bias" << std::endl;
-          for(int layer = 0;layer < n_layers;layer++)
-          {
-            for(long i=0;i<n_nodes[layer+1];i++)
-            {
-              myfile << (float)weights_bias[layer][i] << " ";
-            }
-            std::cout << " ";
-          }
-          myfile << std::endl;
-          myfile << "#weights" << std::endl;
-          for(int layer = 0;layer < n_layers;layer++)
-          {
-            for(int i=0;i<n_nodes[layer+1];i++)
-            {
-                for(int j=0;j<n_nodes[layer];j++)
-                {
-                    myfile << (float)weights_neuron[layer][i][j] << " ";
-                }
-            }
-          }
-          myfile << std::endl;
-          myfile << "#error" << std::endl;
-          myfile << final_error << std::endl;
-          myfile.close();
-        }
-        else
-        {
-          std::cout << "Unable to open file: " << filename << std::endl;
-          exit(1);
-        }
-
-    }
-
-    void load_from_file(std::string filename,bool quiet=false)
-    {
-        if(!quiet)
-          std::cout << "loading from file:" << filename << std::endl;
-        std::ifstream myfile (filename.c_str());
-        if (myfile.is_open())
-        {
-          std::string line;
-          std::string tmp;
-          int stage = 0;
-          bool done = false;
-          while(!done&&getline(myfile,line))
-          {
-            if(line[0] == '#')continue;
-            switch(stage)
-            {
-              case 0: // get n_nodes
-              {
-                std::stringstream ss;
-                ss << line;
-                int n_nodes_size;
-                ss >> tmp;
-                n_nodes_size = atoi(tmp.c_str());
-                if(n_nodes_size != n_nodes.size())
-                {
-                  std::cout << "network structure is not consistent." << std::endl;
-                  exit(1);
-                }
-                for(int i=0;i<n_nodes_size;i++)
-                {
-                  int layer_size;
-                  ss >> tmp;
-                  layer_size = atoi(tmp.c_str());
-                  if(layer_size != n_nodes[i])
-                  {
-                    std::cout << "network structure is not consistent." << std::endl;
-                    exit(1);
-                  }
-                }
-                stage = 1;
-                break;
-              }
-              case 1: // get bias
-              {
-                std::stringstream ss;
-                ss << line;
-                for(int layer = 0;layer < n_layers;layer++)
-                {
-                  for(long i=0;i<n_nodes[layer+1];i++)
-                  {
-                    ss >> tmp;
-                    weights_bias[layer][i] = atof(tmp.c_str());
-                  }
-                }
-                stage = 2;
-                break;
-              }
-              case 2: // get weights
-              {
-                std::stringstream ss;
-                ss << line;
-                for(int layer = 0;layer < n_layers;layer++)
-                {
-                  for(int i=0;i<n_nodes[layer+1];i++)
-                  {
-                      for(int j=0;j<n_nodes[layer];j++)
-                      {
-                          ss >> tmp;
-                          weights_neuron[layer][i][j] = atof(tmp.c_str());
-                      }
-                  }
-                }
-                stage = 3;
-                break;
-              }
-              case 3: // final error
-              {
-                std::stringstream ss;
-                ss << line;
-                ss >> tmp;
-                final_error = atof(tmp.c_str());
-                stage = 4;
-                break;
-              }
-              default:done = true;break;
-            }
-          }
-          myfile.close();
-        }
-        else std::cout << "Unable to open file: " << filename << std::endl;
-
-    }
 
     T epsilon;
     T alpha;
@@ -1179,6 +1339,32 @@ struct Perceptron
         bool init = true;
         perror = 1e10;
         T min_final_error = 1e10;
+
+        std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
+        for(long i=0;i<n_elements;i++)
+        {
+          vrtx[i%vrtx.size()].push_back(i);
+        }
+        std::vector<training_info<T>*> g;
+        for(long i=0;i<boost::thread::hardware_concurrency();i++)
+        {
+          g.push_back(new training_info<T>());
+        }
+        for(long thread=0;thread<g.size();thread++)
+        {
+          g[thread]->quasi_newton = quasi_newton;
+          g[thread]->n_nodes = n_nodes;
+          g[thread]->n_elements = n_elements;
+          g[thread]->n_variables = n_variables;
+          g[thread]->n_labels = n_labels;
+          g[thread]->n_layers = n_layers;
+          g[thread]->weights_neuron = weights_neuron;
+          g[thread]->weights_bias = weights_bias;
+          g[thread]->epsilon = epsilon;
+          g[thread]->type = get_sigmoid();
+          g[thread]->init(alpha);
+        }
+
         for(long iter = 0; iter < n_iterations || continue_training; iter++)
         {
             T error = 0;
@@ -1190,35 +1376,14 @@ struct Perceptron
             //                                                                              //
             //////////////////////////////////////////////////////////////////////////////////
             std::vector<boost::thread*> threads;
-            std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
-            std::vector<training_info<T>*> g;
-            for(long i=0;i<n_elements;i++)
-            {
-              vrtx[i%vrtx.size()].push_back(i);
-            }
-            for(long i=0;i<vrtx.size();i++)
-            {
-              g.push_back(new training_info<T>());
-            }
             if(quasi_newton!=NULL)
             {
               quasi_newton->init_gradient();
             }
             for(long thread=0;thread<vrtx.size();thread++)
             {
-              g[thread]->quasi_newton = quasi_newton;
-              g[thread]->n_nodes = n_nodes;
-              g[thread]->n_elements = n_elements;
-              g[thread]->n_variables = n_variables;
-              g[thread]->n_labels = n_labels;
-              g[thread]->n_layers = n_layers;
-              g[thread]->weights_neuron = weights_neuron;
-              g[thread]->weights_bias = weights_bias;
-              g[thread]->epsilon = epsilon;
-              g[thread]->type = get_sigmoid();
-
-              g[thread]->init(alpha);
-              threads.push_back(new boost::thread(training_worker<T>,g[thread],vrtx[thread],variables,labels));
+              g[thread]->reset();
+              threads.push_back(new boost::thread(training_worker<T>,iter%10000==0,vrtx.size(),iter,g[thread],vrtx[thread],variables,labels));
             }
             for(long thread=0;thread<vrtx.size();thread++)
             {
@@ -1236,12 +1401,9 @@ struct Perceptron
               g[thread]->globalUpdate();
               error += g[thread]->partial_error;
               index += g[thread]->smallest_index;
-              g[thread]->destroy();
-              delete g[thread];
             }
             threads.clear();
-            vrtx.clear();
-            g.clear();
+
             if(n_test_elements>0&&test_variables!=NULL&&test_labels!=NULL)
             {
                 final_error = verify(n_test_elements,n_variables,test_variables,n_labels,test_labels);
@@ -1266,6 +1428,14 @@ struct Perceptron
             }
 
         }
+        vrtx.clear();
+        for(long thread=0;thread<vrtx.size();thread++)
+        {
+          g[thread]->destroy();
+          delete g[thread];
+        }
+        g.clear();
+
     }
 
 };
