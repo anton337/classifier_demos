@@ -28,7 +28,7 @@ void model()
       double * out = perceptron->model(viz_in_dat->n_vars,1,&viz_in_dat->viz_dat[viz_in_dat->viz_selection*viz_in_dat->n_vars]);
       int max_i=1;
       double max_val=0;
-      for(int i=0;i<10;i++)
+      for(int i=0;i<1;i++)
       {
         if(out[i]>max_val)
         {
@@ -36,9 +36,8 @@ void model()
           max_val=out[i];
         }
       }
-      std::cout << "ans:" << max_i << std::endl;
+      std::cout << (char)(64+label_dat[viz_in_dat->viz_selection]) << "\t" << "ans:" << max_i << "\t" << max_val << std::endl;
       delete [] out;
-      //std::cout << (char)(64+label_dat[viz_in_dat->viz_selection]) << std::endl;
       usleep(1000000);
     }
 }
@@ -55,12 +54,12 @@ void test_mnist()
     for(int i=0;i<N;i++)
     {
       {
-        if(label_dat[i] == 1)
+        if(label_dat[i] == J+1)
         {
           out_dat[i] = 1;
         }
         else
-        if(label_dat[i] == 2)
+        if(label_dat[i] < J+10 && label_dat[i] > J-10)
         {
           out_dat[i] = 1e-5;
         }
@@ -70,85 +69,15 @@ void test_mnist()
         }
       }
     }
-    //perceptrons[J] -> train(0,.01,1000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
-    perceptron -> train(0,1.0,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,1,viz_in_dat->viz_dat,out_dat);
+    perceptrons[J] -> train(0,1.0,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,1,viz_in_dat->viz_dat,out_dat);
     std::stringstream ss;
-    ss << output_dir << "/mnist-" << (char)(64+1) << ".ann";
-    //ss << output_dir << "/mnist.ann";
-    dump_to_file(perceptrons[0],ss.str());
-    //J = (J+1)%10;
-    //perceptron = perceptrons[J];
-    //viz_probe->probe_perceptron = perceptrons[J];
-  }
-}
-
-/*
-VisualizeActivationProbe < double > * viz_probe = NULL;
-
-std::vector<Perceptron<double> * > perceptrons;
-
-Perceptron<double> * perceptron = NULL;
-
-Perceptron<double> * merged = NULL;
-
-std::string output_dir = "";
-
-//long n_out = 1;
-long n_out = 10;
-
-// models stuff periodically
-void model()
-{
-    while(true)
-    {
-        double * out = perceptron->model(viz_in_dat->n_vars,n_out,&viz_in_dat->viz_dat[viz_in_dat->viz_selection*viz_in_dat->n_vars]);
-        int max_i=0;
-        double max_val=0;
-        for(int i=0;i<10;i++)
-        {
-          if(out[i]>max_val)
-          {
-            max_i=i;
-            max_val=out[i];
-          }
-        }
-        std::cout << "ans:" << max_i << std::endl;
-        delete [] out;
-        usleep(10000);
-    }
-}
-
-// learns to classify hand written digits
-void test_mnist()
-{
-  long N = viz_in_dat->n_elems/(viz_in_dat->n_x*viz_in_dat->n_y);
-  double * out_dat = new double[n_out*N];
-  // just recognize the digit '3'
-  int J = 0;
-  while(true)
-  {
-    for(int i=0;i<N;i++)
-    {
-      for(int j=0;j<n_out;j++)
-      {
-        {
-          //out_dat[n_out*i+j] = (i/(100*5)==J)?1.0:0.0;
-          out_dat[n_out*i+j] = (i/(100*5)==j)?1.0:0.0;
-        }
-      }
-    }
-    //perceptrons[J] -> train(0,.01,1000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
-    perceptron -> train(0,1.0,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
-    std::stringstream ss;
-    //ss << output_dir << "/mnist-" << J << ".ann";
-    ss << output_dir << "/mnist.ann";
+    ss << output_dir << "/mnist-" << (char)(65+J) << ".ann";
     dump_to_file(perceptrons[J],ss.str());
-    J = (J+1)%10;
-    //perceptron = perceptrons[J];
-    //viz_probe->probe_perceptron = perceptrons[J];
+    J = (J+1)%26;
+    perceptron = perceptrons[J];
+    viz_probe->probe_perceptron = perceptrons[J];
   }
 }
-*/
 
 int main(int argc,char ** argv)
 {
@@ -172,8 +101,6 @@ int main(int argc,char ** argv)
     // load input
     if(argc>0)
     {
-      //Image * dat = new Image();
-      //ImageLoad(argv[1],dat);
       long nx = 28;
       long ny = 28;
       binaryReader<double> reader;
@@ -193,7 +120,13 @@ int main(int argc,char ** argv)
       nodes.push_back(16); // hidden layer
       nodes.push_back(1); // output layer
       nodes.push_back(1); // outputs
-      perceptrons.push_back(new Perceptron<double>(nodes));
+      for(int i=0;i<26;i++)
+      {
+        perceptrons.push_back(new Perceptron<double>(nodes));
+        //std::stringstream ss;
+        //ss << output_dir << "/mnist-" << (char)(65+i) << ".ann";
+        //load_from_file ( perceptrons[i] , ss.str() );
+      }
       perceptron = perceptrons[0];
       viz_probe = new VisualizeActivationProbe < double > ( perceptrons[0]
                                                           , new ActivationProbe<double> ( perceptrons[0]
@@ -205,42 +138,7 @@ int main(int argc,char ** argv)
                                                           , 0 , 1 , -1 , 1
                                                           );
       addDisplay ( viz_probe  );
-      /*
-      for(int i=0;i<10;i++)
-      {
-        perceptrons.push_back(new Perceptron<double>(nodes));
-        std::stringstream ss;
-        ss << output_dir << "/mnist-" << i << ".ann";
-        load_from_file ( perceptrons[i] , ss.str() );
-      }
 
-      MergePerceptrons<double> merge_perceptrons;
-      merged = merge_perceptrons . merge ( perceptrons );
-
-      //perceptron = perceptrons[0];
-      perceptron = merged;
-
-      double * D = dat->get_doubles(nx,ny);
-      viz_in_dat = new VisualizeDataArray < double > ( dat->get_size()
-                                                     , nx*ny
-                                                     , dat->get_width()
-                                                     , nx
-                                                     , ny
-                                                     , D
-                                                     , -1 , 0 , -1 , 1
-                                                     );
-      viz_probe = new VisualizeActivationProbe < double > ( merged // perceptrons[0]
-                                                          , new ActivationProbe<double> ( merged // perceptrons[0]
-                                                                                        , 0
-                                                                                        )
-                                                          , 20     , 4 * 2
-                                                          , 20     , 4 * 5
-                                                          //20x20  //16
-                                                          , 0 , 1 , -1 , 1
-                                                          );
-      addDisplay ( viz_in_dat );
-      addDisplay ( viz_probe  );
-      */
     }
     else
     {

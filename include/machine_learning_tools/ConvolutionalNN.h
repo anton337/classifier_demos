@@ -728,6 +728,162 @@ T min(T a,T b)
 }
 
 template<typename T>
+void ForwardReLU()
+{
+    for(long i=0;i<size;i++)
+    {
+        y[l][0][i] = max(0,y[l-1][0][i]);
+    }
+}
+
+template<typename T>
+void ReverseReLU()
+{
+    for(long i=0;i<size;i++)
+    {
+        if(y[l][0][i] < 0)
+        {
+            y[l][0][i] = max(0,y[l-1][0][i]);
+        }
+        else
+        {
+            dEdy[l-1][0][i] = dEdy[l][0][i];
+        }
+    }
+}
+
+template<typename T>
+void ForwardFullyConnected()
+{
+    for(long i=0;i<size_1;i++)
+    {
+        y[l][0][i] = 0;
+        for(long j=0;j<size_2;j++)
+        {
+            y[l][0][i] += W[l][0][0][i][j] * y[l-1][0][j];
+        }
+    }
+}
+
+template<typename T>
+void ReverseFullyConnectedDeltas()
+{
+    for(long j=0;j<size_2;j++)
+    {
+        dEdy[l-1][0][j] = 0;
+        for(long i=0;i<size_1;i++)
+        {
+            dEdy[l-1][0][j] += W[l][0][0][j][i] * dEdy[l][0][i];
+        }
+    }
+}
+
+template<typename T>
+void ReverseFullyConnectedUpdate()
+{
+    for(long i=0;i<size_1;i++)
+    {
+        dEdW[l][0][i] = 0;
+        for(long j=0;j<size_2;j++)
+        {
+            dEdW[l][0][i] += dEdy[l][0][i] * y[l-1][0][j];
+        }
+    }
+}
+
+template<typename T>
+void ForwardPooling()
+{
+    for(long n=0;n<N;n++)
+    for(long X=0;X<nx;X+=k)
+    for(long Y=0;Y<ny;Y+=k)
+    {
+        y[l][n][X+nx*Y] = -100000000;
+    }
+    for(long n=0;n<N;n++)
+    for(long x=0,X=0;x<nx;x+=k,X++)
+    for(long dx=0;dx<k;dx++)
+    for(long y=0,Y=0;y<ny;y+=k,Y++)
+    for(long dy=0;dy<k;dy++)
+    {
+        y[l][n][X+nx*Y] = max(y[l][n][X+nx*Y],y[l-1][n][x+dx+nx*(y+dy)]);
+    }
+}
+
+template<typename T>
+void ReversePooling()
+{
+    for(long n=0;n<N;n++)
+    for(long x=0,X=0;x<nx;x+=k,X++)
+    for(long dx=0;dx<k;dx++)
+    for(long y=0,Y=0;y<ny;y+=k,Y++)
+    for(long dy=0;dy<k;dy++)
+    {
+        if(y[l][n][X+nx*Y] == y[l-1][n][x+dx+nx*(y+dy)])
+        {
+            dEdy[l-1][n][x+dx+nx*(y+dy)] = dEdy[l][n][X+nx*Y];
+        }
+        else
+        {
+            dEdy[l-1][n][x+dx+nx*(y+dy)] = 0;
+        }
+    }
+}
+
+template<typename T>
+void ForwardConvolutional()
+{
+    for(long n=0;n<N;n++)
+    for(long m=0;m<M;m++)
+    {
+        for(long x=k,i=0;x+k<nx;x++)
+        for(long y=k;y+k<ny;y++,i++)
+        {
+            y[l][n][i] = 0;
+            for(long dx=-k,j=0;dx<=k;x++)
+            for(long dy=-k;dy<=k;y++,j++)
+            {
+                y[l][n][i] += W[l][m][n][i][j] * y[l-1][m][x+dx+nx*(y+dy)];
+            }
+        }
+    }
+}
+
+template<typename T>
+void ReverseConvolutionalDeltas()
+{
+    for(long n=0;n<N;n++)
+    for(long m=0;m<M;m++)
+    {
+        for(long j=0;j<size_2;j++)
+        {
+            dEdy[l-1][m][j] = 0;
+            for(long i=0;i<size_1;i++)
+            {
+                dEdy[l-1][m][j] += W[l][m][n][j][i] * dEdy[l][n][i];
+            }
+        }
+    }
+}
+
+template<typename T>
+void ReverseConvolutionalUpdate()
+{
+    for(long n=0;n<N;n++)
+    for(long m=0;m<M;m++)
+    {
+        for(long i=0;i<size_1;i++)
+        {
+            dEdW[l][m][n][i] = 0;
+            for(long j=0;j<size_2;j++)
+            {
+                dEdW[l][m][n][i] += dEdy[l][n][i] * y[l-1][m][j];
+            }
+        }
+    }
+}
+
+template<typename T>
 void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
     {
@@ -859,7 +1015,6 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
 template<typename T>
 void training_worker_svrg(long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
-    if(vrtx.size()>0)
     {
         long n = rand()%vrtx.size();
         for(long layer = 0; layer < g->n_layers; layer++)
@@ -1174,15 +1329,13 @@ struct Perceptron
                 weights_neuron[layer][i] = new T[n_nodes[layer]];
                 for(long j=0;j<n_nodes[layer];j++)
                 {
-                    T val = 1e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
-                    weights_neuron[layer][i][j] = val;
+                    weights_neuron[layer][i][j] = 1.0e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
                 }
             }
             weights_bias[layer] = new T[n_nodes[layer+1]];
             for(long i=0;i<n_nodes[layer+1];i++)
             {
-                T val = 1e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
-                weights_bias[layer][i] = val;
+                weights_bias[layer][i] = 1.0e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
             }
         }
 
@@ -1344,7 +1497,6 @@ struct Perceptron
         bool init = true;
         perror = 1e10;
         T min_final_error = 1e10;
-        long n_valid_elements = 0;
 
         std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
         for(long i=0;i<n_elements;i++)
@@ -1352,7 +1504,6 @@ struct Perceptron
           if(labels[i] > 1e-10)
           {
             vrtx[i%vrtx.size()].push_back(i);
-            n_valid_elements++;
           }
         }
         std::vector<training_info<T>*> g;
@@ -1393,7 +1544,7 @@ struct Perceptron
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->reset();
-              if(iter%10==0)
+              if(iter%100==0)
               {
                 threads.push_back ( new boost::thread ( training_worker<T>
                                                       , vrtx.size()
@@ -1442,7 +1593,7 @@ struct Perceptron
             }
             static int cnt1 = 0;
             if(cnt1%100==0 && error > 1e-20)
-            std::cout << iter << "\tquasi newton=" << ((quasi_newton!=NULL)?(quasi_newton->quasi_newton_update?"true":"false"):"NULL") << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/(n_valid_elements+1e-10) << "\ttest\%error=" << 100*final_error << "\tindex=" << index/(n_valid_elements+1e-10) << std::endl;
+            std::cout << iter << "\tquasi newton=" << ((quasi_newton!=NULL)?(quasi_newton->quasi_newton_update?"true":"false"):"NULL") << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/n_elements << "\ttest\%error=" << 100*final_error << "\tindex=" << index/n_elements << std::endl;
             cnt1++;
             perror = error;
             errs.push_back(error/n_elements);
