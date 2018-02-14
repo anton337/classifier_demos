@@ -20,6 +20,7 @@ std::vector<Perceptron<double> * > perceptrons;
 
 Perceptron<double> * perceptron = NULL;
 
+int J = 0;
 
 void model()
 {
@@ -36,7 +37,7 @@ void model()
           max_val=out[i];
         }
       }
-      std::cout << (char)(64+label_dat[viz_in_dat->viz_selection]) << "\t" << "ans:" << max_i << "\t" << max_val << std::endl;
+      std::cout << (char)(65+J) << "\t" << (char)(64+label_dat[viz_in_dat->viz_selection]) << "\t" << "ans:" << max_i << "\t" << max_val << std::endl;
       delete [] out;
       usleep(1000000);
     }
@@ -47,8 +48,6 @@ void test_mnist()
 {
   long N = viz_in_dat->n_elems/(viz_in_dat->n_x*viz_in_dat->n_y);
   double * out_dat = new double[N];
-  // just recognize the digit '3'
-  int J = 0;
   while(true)
   {
     for(int i=0;i<N;i++)
@@ -123,9 +122,9 @@ int main(int argc,char ** argv)
       for(int i=0;i<26;i++)
       {
         perceptrons.push_back(new Perceptron<double>(nodes));
-        //std::stringstream ss;
-        //ss << output_dir << "/mnist-" << (char)(65+i) << ".ann";
-        //load_from_file ( perceptrons[i] , ss.str() );
+        std::stringstream ss;
+        ss << output_dir << "/mnist-" << (char)(65+i) << ".ann";
+        load_from_file ( perceptrons[i] , ss.str() );
       }
       perceptron = perceptrons[0];
       viz_probe = new VisualizeActivationProbe < double > ( perceptrons[0]

@@ -783,10 +783,10 @@ void ReverseFullyConnectedUpdate()
 {
     for(long i=0;i<size_1;i++)
     {
-        dEdW[l][0][i] = 0;
+        dEdW[l-1][0][i] = 0;
         for(long j=0;j<size_2;j++)
         {
-            dEdW[l][0][i] += dEdy[l][0][i] * y[l-1][0][j];
+            dEdW[l-1][0][i] += dEdy[l][0][i] * y[l][0][j];
         }
     }
 }
@@ -883,6 +883,27 @@ void ReverseConvolutionalUpdate()
     }
 }
 
+enum LayerType
+{
+    FULLY_CONNECTED = 1 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l * y_l
+  , RELU            = 2 // => y_l := max(0,y_l-1)               <= dEdy_l-1 := dEdy_l
+  , POOLING         = 3 // => y_l := max(y_k)                   <= (l==k)?dEdy_l-1=dEdy_l:dEdy_l-1=0        
+  , CONVOLUTIONAL   = 4 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l *_y_l
+};
+
+enum ActivationType
+{
+    IDENTITY        = 1 //                                      f(x) = x                                    f'(x) = 1
+  , BINARY_STEP     = 2 //                                      f(x) = (x>=0)?1:0                           f'(x) = (x!=0)?0:inf
+  , LOGISTIC        = 3 // (soft step)                          f(x) = 1/(1+exp(-x))                        f'(x) = f(x) (1 - f(x))
+  , HYPERBOLIC_TAN  = 4 //                                      f(x) = tanh(x) = (2/(1+exp(-2x))) - 1       f'(x) = 1 - f(x)^2
+  , ARC_TAN         = 5 //                                      f(x) = arctan(x)                            f'(x) = 1/(x^2+1)
+  , RELU            = 6 // (rectified linear unit)              f(x) = (x>=0)?x:0                           f'(x) = (x>=0)?1:0
+  , PRELU           = 7 // (parametric rectified linear unit)   f(x) = (x>=0)?x:a*x                         f'(x) = (x>=0)?1:a
+  , ELU             = 7 // (exponential linear unit)            f(x) = (x>=0)?x:a*(exp(x)-1)                f'(x) = (x>=0)?1:f(x)+a
+  , SOFT_PLUS       = 8 //                                      f(x) = ln(1+exp(x))                         f'(x) = 1/(1+exp(-x))
+}
+
 template<typename T>
 void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
@@ -896,17 +917,30 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 g->activation_values[0][i] = variables[vrtx[n]*g->n_variables+i];
             }
             // forward propagation
-            for(long layer = 0; layer < g->n_layers; layer++)
+            switch ( LayerType )
             {
-                for(long i=0;i<g->n_nodes[layer+1];i++)
-                {
-                    T sum = g->weights_bias[layer][i];
-                    for(long j=0;j<g->n_nodes[layer];j++)
+                case FULLY_CONNECTED :
                     {
-                        sum += g->activation_values[layer][j] * g->weights_neuron[layer][i][j];
+                        for(long layer = 0; layer < g->n_layers; layer++)
+                        {
+                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            {
+                                    T sum = g->weights_bias[layer][i];
+                                    for(long j=0;j<g->n_nodes[layer];j++)
+                                    {
+                                        // W * y
+                                        sum += g->weights_neuron[layer][i][j] * g->activation_values[layer][j];
+                                    }
+                                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                            }
+                        }
+                        break;
                     }
-                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
-                }
+                default :
+                    {
+                        std::cout << "Layer type not defined." << std::endl;
+                        exit(1);
+                    }
             }
             long last_layer = g->n_nodes.size()-2;
             // initialize observed labels
@@ -931,38 +965,118 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 partial_error += fabs(g->deltas[last_layer+1][i]);
             }
             g->partial_error += partial_error;
+
             // back propagation
             for(long layer = g->n_layers-1; layer >= 0; layer--)
             {
                 // back propagate deltas
-                for(long i=0;i<g->n_nodes[layer+1];i++)
+                if(layer+1==last_layer)
                 {
-                    g->deltas[layer+1][i] = 0;
-                    for(long j=0;j<g->n_nodes[layer+2];j++)
+                    for(long i=0;i<g->n_nodes[layer+1];i++)
                     {
-                        if(layer+1==last_layer)
+                        g->deltas[layer+1][i] = 0;
+                        for(long j=0;j<g->n_nodes[layer+2];j++)
                         {
-                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j];
-                        }
-                        else
-                        {
-                            g->deltas[layer+1][i] += dsigmoid(g->activation_values[layer+1][i],g->type)*g->deltas[layer+2][j]*g->weights_neuron[layer+1][j][i];
+                                g->deltas[layer+1][i] += 
+                                    // dEdy
+                                    (
+                                      dsigmoid(g->activation_values[layer+1][i],g->type)
+                                    * g->deltas[layer+2][j]
+                                    )
+                                    ;
                         }
                     }
                 }
+                else
+                {
+                    switch ( LayerType )
+                    {
+                        case FULLY_CONNECTED :
+                            {
+                                for(long i=0;i<g->n_nodes[layer+1];i++)
+                                {
+                                    g->deltas[layer+1][i] = 0;
+                                    for(long j=0;j<g->n_nodes[layer+2];j++)
+                                    {
+                                            g->deltas[layer+1][i] += 
+                                                // dEdy
+                                                (
+                                                  dsigmoid(g->activation_values[layer+1][i],g->type)
+                                                * g->deltas[layer+2][j]
+                                                )
+                                                // W
+                                                * g->weights_neuron[layer+1][j][i]
+                                                ;
+                                    }
+                                }
+                                break;
+                            }
+                        default :
+                            {
+                                std::cout << "Layer type not defined." << std::endl;
+                                exit(1);
+                            }
+                    }
+                }
+                    
+                
                 // biases
-                for(long i=0;i<g->n_nodes[layer+1];i++)
+                switch ( LayerType )
                 {
-                    g->partial_weights_bias[layer][i] += (g->deltas[layer+1][i] - g->partial_weights_bias[layer][i]) * avg_factor;
+                    case FULLY_CONNECTED :
+                        {
+                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            {
+                                    g->partial_weights_bias[layer][i] += 
+                                        ( 
+                                            (
+                                                g->deltas[layer+1][i] 
+                                            )
+                                          
+                                        - g->partial_weights_bias[layer][i] 
+                                        ) * avg_factor;
+                            }
+                            break;
+                        }
+                    default :
+                        {
+                            std::cout << "Layer type not defined." << std::endl;
+                            exit(1);
+                        }
                 }
+                
                 // neuron weights
-                for(long i=0;i<g->n_nodes[layer+1];i++)
+                switch ( LayerType )
                 {
-                    for(long j=0;j<g->n_nodes[layer];j++)
-                    {
-                        g->partial_weights_neuron[layer][i][j] += (g->activation_values[layer][j] * g->deltas[layer+1][i] - g->partial_weights_neuron[layer][i][j]) * avg_factor;
-                    }
+                    case FULLY_CONNECTED :
+                        {
+                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            {
+                                for(long j=0;j<g->n_nodes[layer];j++)
+                                {
+                                        g->partial_weights_neuron[layer][i][j] += 
+                                            ( 
+                                                (
+                                                    // dEdy
+                                                    g->deltas[layer+1][i] 
+                                                    // y
+                                                  * g->activation_values[layer][j]
+                                                )
+                                              
+                                            - g->partial_weights_neuron[layer][i][j]
+                                            ) * avg_factor;
+                                }
+                            }
+                            break;
+                        }
+                    default :
+                        {
+                            std::cout << "Layer type not defined." << std::endl;
+                            exit(1);
+                        }
                 }
+                    
+                
             }
         }
         for(long layer = 0; layer < g->n_layers; layer++)
