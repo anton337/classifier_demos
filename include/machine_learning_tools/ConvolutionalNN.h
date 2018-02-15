@@ -934,11 +934,11 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 g->activation_values[0][i] = variables[vrtx[n]*g->n_variables+i];
             }
             // forward propagation
-            switch ( LayerType )
+            for(long layer = 0; layer < g->n_layers; layer++)
             {
-                case FULLY_CONNECTED :
-                    {
-                        for(long layer = 0; layer < g->n_layers; layer++)
+                switch ( LayerType )
+                {
+                    case FULLY_CONNECTED :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
                             {
@@ -950,14 +950,136 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                                     }
                                     g->activation_values[layer+1][i] = sigmoid(sum,g->type);
                             }
+                            break;
                         }
-                        break;
-                    }
-                default :
-                    {
-                        std::cout << "Layer type not defined." << std::endl;
-                        exit(1);
-                    }
+                    case CONVOLUTIONAL :
+                        {
+
+                            //************************************************************************************//
+                            //
+                            //                  _____
+                            //      Y_{k+1}     |   ||||||||||       N features
+                            //                  |   ||||||||||
+                            //                  |___||||||||||
+                            //
+                            //
+                            //
+                            //
+                            //                              M                           M
+                            //                  _________________________           _________
+                            //                  |    |                  |           |       |
+                            //                  |    | ky               |           |   b   |  N
+                            //     \        /   |____|                  |           |       |
+                            //      \  /\  /    |                       |           |_______|
+                            //       \/  \/     | kx                    |
+                            //                  |                       |  N
+                            //                  |                       |
+                            //                  |                       |
+                            //                  |                       |
+                            //                  |                       |
+                            //                  |_______________________|
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //                 ________________
+                            //      Y_{k}      |        | | | |        M features
+                            //                 |        | | | |
+                            //                 |        | | | |
+                            //                 |        | | | |
+                            //                 |________|_|_|_|
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //      Y_{k+1} = s ( W * Y_{k} + b )
+                            //
+                            //
+                            //
+                            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                            //
+                            //      W is arranged by:
+                            //
+                            //      W[N * ky][M * kx]      // contains M * N convolution kernels
+                            //
+                            //      // row major
+                            //
+                            //      W[N * ky + y][M * kx + x]
+                            //
+                            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                            //
+                            //      dx = nx - (kx/2)*2
+                            //      dy = ny - (ky/2)*2
+                            //
+                            //      b[N * (dx * dy)]      // contains N bias terms
+                            //
+                            //      // row major
+                            //
+                            //      b[(dx * dy) * n + (dx) * y + x]
+                            //
+                            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                            //
+                            //      Y_{k} [M * (nx * ny)]       // contains M features from current layer
+                            //
+                            //      // row major
+                            //
+                            //      Y_{k} [(nx * ny) * m + (nx) * y + x]
+                            //
+                            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                            //
+                            //      dx = nx - (kx/2)*2
+                            //      dy = ny - (ky/2)*2
+                            //
+                            //      Y_{k+1} [N * (dx * dy)]     // contains N features from next layer
+                            //
+                            //      // row major
+                            //
+                            //      Y_{k+1} [(dx * dy) * n + (dx) * y + x]
+                            //
+                            //
+                            //
+                            //************************************************************************************//
+
+                            // j : n_nodes[layer  ] = curr size = M * nx * ny
+                            // i : n_nodes[layer+1] = next size = N * dx * dy
+                            long M = g->n_features[layer  ];
+                            long N = g->n_features[layer+1];
+                            long wx = (kx/2)*2;
+                            long wy = (ky/2)*2;
+                            long dx = nx - (kx/2)*2;
+                            long dy = ny - (ky/2)*2;
+
+                            for(long m=0,i=0;m<M;m++)
+                            {
+                                for(long oy=0;oy<dy;oy++)
+                                for(long ox=0;ox<dx;ox++,i++)
+                                {
+                                    T sum = g->weights_bias[layer][i];
+                                    for(long n=0;n<N;n++)
+                                    {
+                                        for(long iy=wy;iy+wy<ny;iy++)
+                                        for(long ix=wx;ix+wx<nx;ix++)
+                                        for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                                        for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                        {
+                                            // W * y
+                                            sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx] 
+                                                 * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                                        }
+                                    }
+                                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                                }
+                            }
+                            break;
+                        }
+                    default :
+                        {
+                            std::cout << "Layer type not defined." << std::endl;
+                            exit(1);
+                        }
+                }
             }
             long last_layer = g->n_nodes.size()-2;
             // initialize observed labels
@@ -1028,6 +1150,46 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                                 }
                                 break;
                             }
+                        case CONVOLUTIONAL :
+                            {
+                                // i : n_nodes[layer+1] = curr size = M * nx * ny
+                                // j : n_nodes[layer+2] = next size = N * dx * dy
+                                long M = g->n_features[layer+1];
+                                long N = g->n_features[layer+2];
+                                long wx = (kx/2)*2;
+                                long wy = (ky/2)*2;
+                                long dx = nx - (kx/2)*2;
+                                long dy = ny - (ky/2)*2;
+
+                                for(long m=0,i=0;m<M;m++)
+                                {
+                                    for(long iy=0;iy<ny;iy++)
+                                    for(long ix=0;ix<nx;ix++,i++)
+                                    {
+                                        g->deltas[layer+1][i] = 0;
+                                        for(long n=0;n<N;n++)
+                                        {
+                                            for(long oy=wy,vy=0;oy+wy<ny;oy++,vy++)
+                                            for(long ox=wx,vx=0;ox+wx<nx;ox++,vx++)
+                                            for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                                            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                            {
+                                                g->deltas[layer+1][i] +=
+                                                    // dEdy
+                                                    (
+                                                      dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*(oy+fy) + (ox+fx)],g->type)
+                                                    * g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]
+                                                    )
+                                                    // W
+                                                    * g->weights_neuron[layer+1][ky*n+ty][kx*m+tx] 
+                                                    ;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                break;
+                            }
                         default :
                             {
                                 std::cout << "Layer type not defined." << std::endl;
@@ -1041,6 +1203,21 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 switch ( LayerType )
                 {
                     case FULLY_CONNECTED :
+                        {
+                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            {
+                                    g->partial_weights_bias[layer][i] += 
+                                        ( 
+                                            (
+                                                g->deltas[layer+1][i] 
+                                            )
+                                          
+                                        - g->partial_weights_bias[layer][i] 
+                                        ) * avg_factor;
+                            }
+                            break;
+                        }
+                    case CONVOLUTIONAL :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
                             {
@@ -1082,6 +1259,57 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                                               
                                             - g->partial_weights_neuron[layer][i][j]
                                             ) * avg_factor;
+                                }
+                            }
+                            break;
+                        }
+                    case CONVOLUTIONAL :
+                        {
+                            {
+                                for(long n=0;n<N;n++)
+                                {
+                                    for(long ty=0;ty<ky;ty++)
+                                    {
+                                        for(long m=0;m<M;m++)
+                                        {
+                                            for(long tx=0;tx<kx;tx++)
+                                            {
+                                                g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
+                                            }
+                                        }
+                                    }
+
+                                }
+                            }
+                            for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
+                            {
+                                for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
+                                {
+                                    for(long m=0,j=0;m<M;m++)
+                                    {
+                                        for(long iy=wy;iy+wy<ny;iy++)
+                                        for(long ix=wx;ix+wx<nx;ix++,j++)
+                                        {
+                                            for(long n=0,i=0;n<N;n++)
+                                            {
+                                                for(long vy=0;vy<dy;vy++)
+                                                for(long vx=0;vx<dx;vx++,i++)
+                                                {
+                                                        g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
+                                                            ( 
+                                                                (
+                                                                    // dEdy
+                                                                    g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
+                                                                    // y
+                                                                  * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
+                                                                )
+                                                              
+                                                            - g->partial_weights_neuron[layer][i][j]
+                                                            ) * avg_factor;
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             break;
