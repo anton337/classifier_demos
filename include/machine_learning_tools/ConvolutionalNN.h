@@ -732,7 +732,7 @@ void ForwardReLU()
 {
     for(long i=0;i<size;i++)
     {
-        y[l][0][i] = max(0,y[l-1][0][i]);
+        y[l][i] = max(0,y[l-1][i]);
     }
 }
 
@@ -741,13 +741,13 @@ void ReverseReLU()
 {
     for(long i=0;i<size;i++)
     {
-        if(y[l][0][i] < 0)
+        if(y[l][i] < 0)
         {
-            y[l][0][i] = max(0,y[l-1][0][i]);
+            y[l][i] = max(0,y[l-1][i]);
         }
         else
         {
-            dEdy[l-1][0][i] = dEdy[l][0][i];
+            dEdy[l-1][i] = dEdy[l][i];
         }
     }
 }
@@ -757,10 +757,10 @@ void ForwardFullyConnected()
 {
     for(long i=0;i<size_1;i++)
     {
-        y[l][0][i] = 0;
+        y[l][i] = 0;
         for(long j=0;j<size_2;j++)
         {
-            y[l][0][i] += W[l][0][0][i][j] * y[l-1][0][j];
+            y[l][i] += W[l][i][j] * y[l-1][j];
         }
     }
 }
@@ -770,10 +770,10 @@ void ReverseFullyConnectedDeltas()
 {
     for(long j=0;j<size_2;j++)
     {
-        dEdy[l-1][0][j] = 0;
+        dEdy[l-1][j] = 0;
         for(long i=0;i<size_1;i++)
         {
-            dEdy[l-1][0][j] += W[l][0][0][j][i] * dEdy[l][0][i];
+            dEdy[l-1][j] += W[l][j][i] * dEdy[l][i];
         }
     }
 }
@@ -783,10 +783,10 @@ void ReverseFullyConnectedUpdate()
 {
     for(long i=0;i<size_1;i++)
     {
-        dEdW[l-1][0][i] = 0;
+        dEdW[l-1][i] = 0;
         for(long j=0;j<size_2;j++)
         {
-            dEdW[l-1][0][i] += dEdy[l][0][i] * y[l][0][j];
+            dEdW[l-1][i] += dEdy[l][i] * y[l][j];
         }
     }
 }
@@ -798,34 +798,38 @@ void ForwardPooling()
     for(long X=0;X<nx;X+=k)
     for(long Y=0;Y<ny;Y+=k)
     {
-        y[l][n][X+nx*Y] = -100000000;
+        y[l][nx*ny*n+X+nx*Y] = -100000000;
     }
+    long NX = nx/k;
+    long NY = ny/k;
     for(long n=0;n<N;n++)
     for(long x=0,X=0;x<nx;x+=k,X++)
     for(long dx=0;dx<k;dx++)
     for(long y=0,Y=0;y<ny;y+=k,Y++)
     for(long dy=0;dy<k;dy++)
     {
-        y[l][n][X+nx*Y] = max(y[l][n][X+nx*Y],y[l-1][n][x+dx+nx*(y+dy)]);
+        y[l][NX*NY*n+X+nx*Y] = max(y[l][NX*NY*n+X+nx*Y],y[l-1][nx*ny*n+x+dx+nx*(y+dy)]);
     }
 }
 
 template<typename T>
 void ReversePooling()
 {
+    long NX = nx/k;
+    long NY = ny/k;
     for(long n=0;n<N;n++)
     for(long x=0,X=0;x<nx;x+=k,X++)
     for(long dx=0;dx<k;dx++)
     for(long y=0,Y=0;y<ny;y+=k,Y++)
     for(long dy=0;dy<k;dy++)
     {
-        if(y[l][n][X+nx*Y] == y[l-1][n][x+dx+nx*(y+dy)])
+        if(y[l][NX*NY*n+X+nx*Y] == y[l-1][nx*ny*n+x+dx+nx*(y+dy)])
         {
-            dEdy[l-1][n][x+dx+nx*(y+dy)] = dEdy[l][n][X+nx*Y];
+            dEdy[l-1][nx*ny*n+x+dx+nx*(y+dy)] = dEdy[l][NX*NY*n+X+nx*Y];
         }
         else
         {
-            dEdy[l-1][n][x+dx+nx*(y+dy)] = 0;
+            dEdy[l-1][nx*ny*n+x+dx+nx*(y+dy)] = 0;
         }
     }
 }
@@ -833,17 +837,21 @@ void ReversePooling()
 template<typename T>
 void ForwardConvolutional()
 {
+    long KX = 2*k+1;
+    long KY = 2*k+1;
+    long NX = nx-KX;
+    long NY = ny-KY;
     for(long n=0;n<N;n++)
     for(long m=0;m<M;m++)
     {
-        for(long x=k,i=0;x+k<nx;x++)
-        for(long y=k;y+k<ny;y++,i++)
+        for(long y=k,i=0;y+k<ny;y++)
+        for(long x=k;x+k<nx;x++,i++)
         {
-            y[l][n][i] = 0;
-            for(long dx=-k,j=0;dx<=k;x++)
-            for(long dy=-k;dy<=k;y++,j++)
+            y[l][NX*NY*n+i] = 0;
+            for(long dy=-k,j=0,ky=0;dy<=k;y++,ky++)
+            for(long dy=-k,kx=0;dx<=k;x++,j++,kx++)
             {
-                y[l][n][i] += W[l][m][n][i][j] * y[l-1][m][x+dx+nx*(y+dy)];
+                y[l][NX*NY*n+i] += W[l][KX*n+kx][KY*m+ky] * y[l-1][nx*ny*m+x+dx+nx*(y+dy)];
             }
         }
     }
@@ -852,15 +860,22 @@ void ForwardConvolutional()
 template<typename T>
 void ReverseConvolutionalDeltas()
 {
+    long NX = nx-2*k-1;
+    long NY = ny-2*k-1;
     for(long n=0;n<N;n++)
     for(long m=0;m<M;m++)
     {
-        for(long j=0;j<size_2;j++)
+        for(long i=0;i<nx*ny;i++)
         {
-            dEdy[l-1][m][j] = 0;
-            for(long i=0;i<size_1;i++)
+            dEdy[l-1][nx*ny*m+i] = 0;
+        }
+        for(long dy=-k,j=0,ky=0;dy<=k;y++,ky++)
+        for(long dx=-k,kx=0;dx<=k;x++,j++,kx++)
+        {
+            for(long y=k,i=0;y+k<ny;y++)
+            for(long x=k;x+k<nx;x++,i++)
             {
-                dEdy[l-1][m][j] += W[l][m][n][j][i] * dEdy[l][n][i];
+                dEdy[l-1][nx*ny*m+x+dx+nx*(y+dy)] += W[l][KX*n+kx][KY*m+ky] * dEdy[l][NX*NY*n+i];
             }
         }
     }
@@ -869,6 +884,8 @@ void ReverseConvolutionalDeltas()
 template<typename T>
 void ReverseConvolutionalUpdate()
 {
+    long NX = nx-2*k-1;
+    long NY = ny-2*k-1;
     for(long n=0;n<N;n++)
     for(long m=0;m<M;m++)
     {
@@ -877,7 +894,7 @@ void ReverseConvolutionalUpdate()
             dEdW[l][m][n][i] = 0;
             for(long j=0;j<size_2;j++)
             {
-                dEdW[l][m][n][i] += dEdy[l][n][i] * y[l-1][m][j];
+                dEdW[l-1][KX*n+kx][KY*m+ky] += dEdy[l][NX*NY*n+i] * y[l][nx*ny*m+dx+nx*(y+dy)];
             }
         }
     }
