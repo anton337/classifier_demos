@@ -4,7 +4,8 @@
 #export PROJECT=signal_tracking
 #export PROJECT=rbm_single_layer_example
 #export PROJECT=auto_encoder_image_segmentation
-export PROJECT=mnist_classifier
+#export PROJECT=mnist_classifier
+export PROJECT=convolutional_neural_network
 
 ./clean.sh
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <boost/thread.hpp>
 
 template < typename T >
 T sigmoid1(T x)
@@ -727,6 +728,7 @@ T min(T a,T b)
     return (a<b)?a:b;
 }
 
+/*
 template<typename T>
 void ForwardReLU()
 {
@@ -899,13 +901,14 @@ void ReverseConvolutionalUpdate()
         }
     }
 }
+*/
 
 enum LayerType
 {
-    FULLY_CONNECTED = 1 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l * y_l
-  , RELU            = 2 // => y_l := max(0,y_l-1)               <= dEdy_l-1 := dEdy_l
-  , POOLING         = 3 // => y_l := max(y_k)                   <= (l==k)?dEdy_l-1=dEdy_l:dEdy_l-1=0        
-  , CONVOLUTIONAL   = 4 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l *_y_l
+    FULLY_CONNECTED_LAYER = 1 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l * y_l
+  , RELU_LAYER            = 2 // => y_l := max(0,y_l-1)               <= dEdy_l-1 := dEdy_l
+  , POOLING_LAYER         = 3 // => y_l := max(y_k)                   <= (l==k)?dEdy_l-1=dEdy_l:dEdy_l-1=0        
+  , CONVOLUTIONAL_LAYER   = 4 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l *_y_l
 };
 
 enum ActivationType
@@ -919,7 +922,7 @@ enum ActivationType
   , PRELU           = 7 // (parametric rectified linear unit)   f(x) = (x>=0)?x:a*x                         f'(x) = (x>=0)?1:a
   , ELU             = 7 // (exponential linear unit)            f(x) = (x>=0)?x:a*(exp(x)-1)                f'(x) = (x>=0)?1:f(x)+a
   , SOFT_PLUS       = 8 //                                      f(x) = ln(1+exp(x))                         f'(x) = 1/(1+exp(-x))
-}
+};
 
 template<typename T>
 void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
@@ -938,7 +941,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
             {
                 switch ( LayerType )
                 {
-                    case FULLY_CONNECTED :
+                    case FULLY_CONNECTED_LAYER :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
                             {
@@ -952,7 +955,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                             }
                             break;
                         }
-                    case CONVOLUTIONAL :
+                    case CONVOLUTIONAL_LAYER :
                         {
 
                             //************************************************************************************//
@@ -1130,7 +1133,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 {
                     switch ( LayerType )
                     {
-                        case FULLY_CONNECTED :
+                        case FULLY_CONNECTED_LAYER :
                             {
                                 for(long i=0;i<g->n_nodes[layer+1];i++)
                                 {
@@ -1150,7 +1153,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                                 }
                                 break;
                             }
-                        case CONVOLUTIONAL :
+                        case CONVOLUTIONAL_LAYER :
                             {
                                 // i : n_nodes[layer+1] = curr size = M * nx * ny
                                 // j : n_nodes[layer+2] = next size = N * dx * dy
@@ -1202,7 +1205,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 // biases
                 switch ( LayerType )
                 {
-                    case FULLY_CONNECTED :
+                    case FULLY_CONNECTED_LAYER :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
                             {
@@ -1217,7 +1220,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                             }
                             break;
                         }
-                    case CONVOLUTIONAL :
+                    case CONVOLUTIONAL_LAYER :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
                             {
@@ -1242,7 +1245,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 // neuron weights
                 switch ( LayerType )
                 {
-                    case FULLY_CONNECTED :
+                    case FULLY_CONNECTED_LAYER :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
                             {
@@ -1263,7 +1266,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                             }
                             break;
                         }
-                    case CONVOLUTIONAL :
+                    case CONVOLUTIONAL_LAYER :
                         {
                             {
                                 for(long n=0;n<N;n++)

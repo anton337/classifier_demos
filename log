@@ -1,0 +1,93 @@
+Project home: /home/antonk/classifier_demos/classifier_demos
+Project: convolutional_neural_network
+find /home/antonk/classifier_demos/classifier_demos/obj/ -name "*.o" | xargs rm -f
+rm -f /home/antonk/classifier_demos/classifier_demos/bin/convolutional_neural_network/demo.bin
+Project home: /home/antonk/classifier_demos/classifier_demos
+Project: convolutional_neural_network
+g++ -O3 -g0 -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -c /home/antonk/classifier_demos/classifier_demos/src//diagnostics/Histogram.cpp -o /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o
+g++ -O3 -g0 -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -c /home/antonk/classifier_demos/classifier_demos/src//file_input/readBMP.cpp -o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o
+g++ -O3 -g0 -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools /home/antonk/classifier_demos/classifier_demos/src/projects/convolutional_neural_network/main.cpp /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o -o /home/antonk/classifier_demos/classifier_demos/bin/convolutional_neural_network/demo.bin -lglut -lGL -lGLU -lboost_system -lboost_thread
+In file included from /home/antonk/classifier_demos/classifier_demos/src/projects/convolutional_neural_network/main.cpp:2:0:
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h: In function 'void training_worker(long int, long int, training_info<T>*, const std::vector<long int>&, T*, T*)':
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:942:36: error: expected primary-expression before ')' token
+                 switch ( LayerType )
+                                    ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1052:40: error: 'kx' was not declared in this scope
+                             long wx = (kx/2)*2;
+                                        ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1053:40: error: 'ky' was not declared in this scope
+                             long wy = (ky/2)*2;
+                                        ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1054:39: error: 'nx' was not declared in this scope
+                             long dx = nx - (kx/2)*2;
+                                       ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1055:39: error: 'ny' was not declared in this scope
+                             long dy = ny - (ky/2)*2;
+                                       ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1134:40: error: expected primary-expression before ')' token
+                     switch ( LayerType )
+                                        ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1162:44: error: 'kx' was not declared in this scope
+                                 long wx = (kx/2)*2;
+                                            ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1163:44: error: 'ky' was not declared in this scope
+                                 long wy = (ky/2)*2;
+                                            ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1164:43: error: 'nx' was not declared in this scope
+                                 long dx = nx - (kx/2)*2;
+                                           ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1165:43: error: 'ny' was not declared in this scope
+                                 long dy = ny - (ky/2)*2;
+                                           ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1206:36: error: expected primary-expression before ')' token
+                 switch ( LayerType )
+                                    ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1246:36: error: expected primary-expression before ')' token
+                 switch ( LayerType )
+                                    ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1272:48: error: 'N' was not declared in this scope
+                                 for(long n=0;n<N;n++)
+                                                ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1274:54: error: 'ky' was not declared in this scope
+                                     for(long ty=0;ty<ky;ty++)
+                                                      ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1276:56: error: 'M' was not declared in this scope
+                                         for(long m=0;m<M;m++)
+                                                        ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1278:62: error: 'kx' was not declared in this scope
+                                             for(long tx=0;tx<kx;tx++)
+                                                              ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1287:47: error: 'wy' was not declared in this scope
+                             for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
+                                               ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1287:53: error: 'ky' was not declared in this scope
+                             for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
+                                                     ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1289:51: error: 'wx' was not declared in this scope
+                                 for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
+                                                   ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1289:57: error: 'kx' was not declared in this scope
+                                 for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
+                                                         ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1291:56: error: 'M' was not declared in this scope
+                                     for(long m=0,j=0;m<M;m++)
+                                                        ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1293:62: error: 'ny' was not declared in this scope
+                                         for(long iy=wy;iy+wy<ny;iy++)
+                                                              ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1294:62: error: 'nx' was not declared in this scope
+                                         for(long ix=wx;ix+wx<nx;ix++,j++)
+                                                              ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1296:64: error: 'N' was not declared in this scope
+                                             for(long n=0,i=0;n<N;n++)
+                                                                ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1298:66: error: 'dy' was not declared in this scope
+                                                 for(long vy=0;vy<dy;vy++)
+                                                                  ^
+/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools/ConvolutionalNN.h:1299:66: error: 'dx' was not declared in this scope
+                                                 for(long vx=0;vx<dx;vx++,i++)
+                                                                  ^
+Makefile:72: recipe for target '/home/antonk/classifier_demos/classifier_demos/bin/convolutional_neural_network/demo.bin' failed
+make: *** [/home/antonk/classifier_demos/classifier_demos/bin/convolutional_neural_network/demo.bin] Error 1
+Project home: /home/antonk/classifier_demos/classifier_demos
+Running project convolutional_neural_network
