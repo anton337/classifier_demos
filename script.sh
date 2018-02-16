@@ -11,7 +11,7 @@ export PROJECT=convolutional_neural_network
 
 ./build.sh
 
-./run_project.sh
+#./run_project.sh
 
-#./debug_project.sh
+./debug_project.sh
 

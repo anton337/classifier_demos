@@ -84,7 +84,7 @@ int main(int argc,char ** argv)
 
     srand(time(0));
 
-    // load input
+    // snapshot directory
     if(argc>2)
     {
       output_dir = std::string(argv[3]);
@@ -96,7 +96,6 @@ int main(int argc,char ** argv)
       exit(1);
     }
 
-    std::cout << "pass 0" << std::endl;
     // load input
     if(argc>0)
     {
@@ -145,7 +144,6 @@ int main(int argc,char ** argv)
       exit(1);
     }
 
-    std::cout << "pass 1" << std::endl;
 
     if(argc>1)
     {
@@ -158,14 +156,12 @@ int main(int argc,char ** argv)
       exit(1);
     }
 
-    std::cout << "pass 2" << std::endl;
 
     // run test
     new boost::thread(test_mnist);
 
     new boost::thread(model);
 
-    std::cout << "pass 3" << std::endl;
 
     // start graphics
     startGraphics(argc,argv,"EMNIST Digits");

@@ -1,5 +1,5 @@
-#ifndef PERCEPTRON_H
-#define PERCEPTRON_H
+#ifndef CONVOLUTIONAL_NEURAL_NETWORK_H
+#define CONVOLUTIONAL_NEURAL_NETWORK_H
 
 #include <iostream>
 #include <fstream>
@@ -7,505 +7,43 @@
 #include <vector>
 #include <boost/thread.hpp>
 
-template < typename T >
-T sigmoid1(T x)
+#include "Perceptron.h"
+
+enum LayerType
 {
-    return 1.0f / (1.0f + exp(-x));
-}
+    FULLY_CONNECTED_LAYER = 1 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l * y_l
+  , RELU_LAYER            = 2 // => y_l := max(0,y_l-1)               <= dEdy_l-1 := dEdy_l
+  , POOLING_LAYER         = 3 // => y_l := max(y_k)                   <= (l==k)?dEdy_l-1=dEdy_l:dEdy_l-1=0        
+  , CONVOLUTIONAL_LAYER   = 4 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l *_y_l
+};
 
-template < typename T >
-T dsigmoid1(T x)
+enum ActivationType
 {
-    return (1.0f - x)*x;
-}
-
-template < typename T >
-T sigmoid3(T x)
-{
-    return atan(x);
-}
-
-template < typename T >
-T dsigmoid3(T x)
-{
-    return 1.00/(1+x*x);
-}
-
-template < typename T >
-T sigmoid2(T x)
-{
-    return log(1+exp(1.00*x));
-}
-
-template < typename T >
-T dsigmoid2(T x)
-{
-    return 1.00/(1+exp(-1.00*x));
-}
-
-template < typename T >
-T sigmoid(T x,int type)
-{
-    switch(type)
-    {
-        case 0:
-            return sigmoid1(x);
-        case 1:
-            return sigmoid2(x);
-        case 2:
-            return sigmoid3(x);
-    }
-}
-
-template < typename T >
-T dsigmoid(T x,int type)
-{
-    switch(type)
-    {
-        case 0:
-            return dsigmoid1(x);
-        case 1:
-            return dsigmoid2(x);
-        case 2:
-            return dsigmoid3(x);
-    }
-}
-
-template < typename T >
-T max(T a,T b)
-{
-    return (a>b)?a:b;
-}
-
-int maxi(int a,int b)
-{
-    return (a>b)?a:b;
-}
-
-template < typename T >
-void apply_worker(std::vector<long> const & indices,long size,T * y,T * W,T * x)
-{
-  for(long k=0;k<indices.size();k++)
-  {
-    long i = indices[k];
-    y[i] = 0;
-    for(long j=0;j<size;j++)
-    {
-      y[i] += W[i*size+j]*x[j];
-    }
-  }
-}
-
-template < typename T >
-void outer_product_worker(std::vector<long> const & indices,long size,T * H,T * A,T * B,T fact)
-{
-  for(long k=0;k<indices.size();k++)
-  {
-    long i = indices[k];
-    for(long j=0;j<size;j++)
-    {
-      H[i*size+j] += A[i] * B[j] * fact;
-    }
-  }
-}
-
-template<typename T>
-struct quasi_newton_info
-{
-    quasi_newton_info()
-    {
-        quasi_newton_update = false;
-    }
-
-    long get_size()
-    {
-        long size = 0;
-        for(long layer = 0;layer < n_layers;layer++)
-        {
-            size += n_nodes[layer+1]*n_nodes[layer] + n_nodes[layer+1];
-        }
-        return size;
-    }
-
-    void init_gradient ()
-    {
-        long size = get_size();
-        for(long layer = 0,k = 0;layer < n_layers;layer++)
-        {
-            for(long i=0;i<n_nodes[layer+1];i++)
-            {
-                for(long j=0;j<n_nodes[layer];j++,k++)
-                {
-                    grad_tmp[k] = 0;
-                }
-            }
-            for(long i=0;i<n_nodes[layer+1];i++,k++)
-            {
-                grad_tmp[k] = 0;
-            }
-        }
-    }
-
-    void copy (T * src,T * dst,long size)
-    {
-        for(long k=0;k<size;k++)
-        {
-            dst[k] = src[k];
-        }
-    }
-
-    void copy_avg (T * src,T * dst,T alph,long size)
-    {
-        for(long k=0;k<size;k++)
-        {
-            dst[k] += (src[k]-dst[k])*alph;
-        }
-    }
-
-    bool quasi_newton_update;
-    long n_layers;
-    T *** weights_neuron;
-    T **  weights_bias;
-    std::vector<long> n_nodes;
-    T * grad_tmp;
-    T * grad_1;
-    T * grad_2;
-    T * Y;
-    T * dX;
-    T * B;
-    T * H;
-    T alpha;
-
-    void init_QuasiNewton()
-    {
-        long size = get_size();
-        grad_tmp = new T[size];
-        init_gradient();
-        grad_1 = new T[size];
-        grad_2 = new T[size];
-        copy(grad_tmp,grad_1,size);
-        copy(grad_tmp,grad_2,size);
-        B = new T[size*size];
-        T * B_tmp = init_B();
-        copy(B_tmp,B,size*size);
-        delete [] B_tmp;
-        H = new T[size*size];
-        T * H_tmp = init_H();
-        copy(H_tmp,H,size*size);
-        delete [] H_tmp;
-        dX = new T[size*size];
-        T * dX_tmp = get_dx();
-        copy(dX_tmp,dX,size);
-        delete [] dX_tmp;
-        Y = new T[size*size];
-    }
-
-    T * init_B()
-    {
-        long size = get_size();
-        T * B = new T[size*size];
-        for(long t=0;t<size*size;t++)
-        {
-            B[t] = 0;
-        }
-        for(long layer = 0, k = 0;layer < n_layers;layer++)
-        {
-            for(long i=0;i<n_nodes[layer+1];i++)
-            {
-                for(long j=0;j<n_nodes[layer];j++,k++)
-                {
-                    B[k*size+k] = weights_neuron[layer][i][j];
-                }
-            }
-            for(long i=0;i<n_nodes[layer+1];i++,k++)
-            {
-                B[k*size+k] = weights_bias[layer][i];
-            }
-        }
-        return B;
-    }
-
-    T * init_H()
-    {
-        long size = get_size();
-        T * H = new T[size*size];
-        for(long t=0;t<size*size;t++)
-        {
-            H[t] = 0;
-        }
-        for(long layer = 0, k = 0;layer < n_layers;layer++)
-        {
-            for(long i=0;i<n_nodes[layer+1];i++)
-            {
-                for(long j=0;j<n_nodes[layer];j++,k++)
-                {
-                    H[k*size+k] = -1;
-                }
-            }
-            for(long i=0;i<n_nodes[layer+1];i++,k++)
-            {
-                H[k*size+k] = -1;
-            }
-        }
-        return H;
-    }
-
-    void update_QuasiNewton()
-    {
-        long size = get_size();
-        copy_avg(grad_2,grad_1,0.1,size);
-        copy(grad_tmp,grad_2,size);
-        T * Y_tmp = get_y();
-        copy(Y_tmp,Y,size);
-        delete [] Y_tmp;
-        T * dX_tmp = get_dx();
-        copy(dX_tmp,dX,size);
-        delete [] dX_tmp;
-    }
-
-    T * get_y ()
-    {
-        long size = get_size();
-        T * y = new T[size];
-        //T y_m = 0;
-        for(long k=0;k<size;k++)
-        {
-            y[k] = grad_2[k] - grad_1[k];
-            //y_m = max(y_m,fabs(y[k]));
-        }
-        return y;
-    }
-
-    T * get_dx ()
-    {
-        long size = get_size();
-        T * dx = apply(H,grad_1);
-        for(long k=0;k<size;k++)
-        {
-            dx[k] *= -alpha;
-        }
-        return dx;
-    }
-
-    T * get_outer_product(T * a,T * b)
-    {
-        long size = get_size();
-        long prod_size = size*size;
-        T * prod = new T[prod_size];
-        for(long i=0,k=0;i<size;i++)
-        {
-          for(long j=0;j<size;j++,k++)
-          {
-            prod[k] = a[i]*b[j];
-          }
-        }
-        return prod;
-    }
-
-    T get_inner_product(T * a,T * b)
-    {
-        T ret = 0;
-        long size = get_size();
-        for(long i=0;i<size;i++)
-        {
-            ret += a[i]*b[i];
-        }
-        T eps = 1e-2;
-        if(ret<0)
-        {
-            ret -= eps;
-        }
-        else
-        {
-            ret += eps;
-        }
-        return ret;
-    }
-
-    T * apply(T * W, T * x)
-    {
-        long size = get_size();
-        T * y = new T[size];
-        std::vector<boost::thread * > threads;
-        long num_cpu = boost::thread::hardware_concurrency();
-        std::vector<std::vector<long> > indices(num_cpu);
-        for(long i=0;i<size;i++)
-        {
-          indices[i%num_cpu].push_back(i);
-        }
-        for(long i=0;i<num_cpu;i++)
-        {
-          threads.push_back(new boost::thread(apply_worker<T>,indices[i],size,&y[0],&W[0],&x[0]));
-        }
-        for(long i=0;i<threads.size();i++)
-        {
-          threads[i]->join();
-          delete threads[i];
-        }
-        return y;
-    }
-
-    T * apply_t(T * x, T * W)
-    {
-        long size = get_size();
-        T * y = new T[size];
-        for(long i=0,k=0;i<size;i++)
-        {
-          y[i] = 0;
-          for(long j=0;j<size;j++,k++)
-          {
-            y[i] += W[size*j+i]*x[j];
-          }
-        }
-        return y;
-    }
-
-    T limit(T x,T eps)
-    {
-        if(x>0)
-        {
-            if(x>eps)return eps;
-        }
-        else
-        {
-            if(x<-eps)return -eps;
-        }
-        return x;
-    }
-
-    // SR1
-    void SR1_update()
-    {
-        long size = get_size();
-        T * dx_Hy = apply(H,Y);
-        for(long i=0;i<size;i++)
-        {
-          dx_Hy[i] = dX[i] - dx_Hy[i];
-        }
-        T inner = 1.0 / (get_inner_product(dx_Hy,Y));
-        std::vector<boost::thread * > threads;
-        long num_cpu = boost::thread::hardware_concurrency();
-        std::vector<std::vector<long> > indices(num_cpu);
-        for(long i=0;i<size;i++)
-        {
-          indices[i%num_cpu].push_back(i);
-        }
-        for(long i=0;i<num_cpu;i++)
-        {
-          threads.push_back(new boost::thread(outer_product_worker<T>,indices[i],size,&H[0],&dx_Hy[0],&dx_Hy[0],inner));
-        }
-        for(long i=0;i<threads.size();i++)
-        {
-          threads[i]->join();
-          delete threads[i];
-        }
-        delete [] dx_Hy;
-    }
-
-    // Broyden
-    void Broyden_update()
-    {
-        long size = get_size();
-        T * dx_Hy = apply(H,Y);
-        for(long i=0;i<size;i++)
-        {
-          dx_Hy[i] = dX[i] - dx_Hy[i];
-        }
-        T * xH = apply_t(dX,H);
-        T * outer = get_outer_product(dx_Hy,xH);
-        T inner = 1.0 / (get_inner_product(xH,Y));
-        for(long i=0;i<size*size;i++)
-        {
-          H[i] += outer[i] * inner;
-        }
-        delete [] dx_Hy;
-        delete [] xH;
-        delete [] outer;
-    }
-
-    // DFP
-    void DFP_update()
-    {
-        long size = get_size();
-        T * Hy = apply(H,Y);
-        T * outer_2 = get_outer_product(Hy,Hy);
-        T inner_2 = -1.0 / (get_inner_product(Hy,Y));
-        T * outer_1 = get_outer_product(dX,dX);
-        T inner_1 = 1.0 / (get_inner_product(dX,Y));
-        for(long i=0;i<size*size;i++)
-        {
-          H[i] += outer_1[i] * inner_1 + outer_2[i] * inner_2;
-        }
-        delete [] outer_2;
-        delete [] outer_1;
-        delete [] Hy;
-    }
-
-    T * apply_M(T * A, T * B)
-    {
-        long size = get_size();
-        T * C = new T[size*size];
-        for(long i=0,k=0;i<size;i++)
-        {
-          for(long j=0;j<size;j++,k++)
-          {
-            C[k] = 0;
-            for(long t=0;t<size;t++)
-            {
-              C[k] += A[i*size+t]*B[t*size+j];
-            }
-          }
-        }
-        return C;
-    }
-
-    // BFGS
-    void BFGS_update()
-    {
-        long size = get_size();
-        T inner = 1.0 / (get_inner_product(Y,dX));
-        T * outer_xx = get_outer_product(dX,dX);
-        T * outer_xy = get_outer_product(dX,Y);
-        T * outer_yx = get_outer_product(Y,dX);
-        for(long i=0,k=0;i<size;i++)
-        {
-          for(long j=0;j<size;j++,k++)
-          {
-            if(i==j)
-            {
-              outer_xy[k] = 1-outer_xy[k]*inner;
-              outer_yx[k] = 1-outer_yx[k]*inner;
-            }
-            else
-            {
-              outer_xy[k] = -outer_xy[k]*inner;
-              outer_yx[k] = -outer_yx[k]*inner;
-            }
-            outer_xx[k] = outer_xx[k]*inner;
-          }
-        }
-        T * F = apply_M(outer_xy,H);
-        T * G = apply_M(F,outer_yx);
-        for(long i=0;i<size*size;i++)
-        {
-          H[i] = G[i] + outer_xx[i];
-        }
-        delete [] F;
-        delete [] G;
-        delete [] outer_xx;
-        delete [] outer_xy;
-        delete [] outer_yx;
-    }
-
+    IDENTITY        = 1 //                                      f(x) = x                                    f'(x) = 1
+  , BINARY_STEP     = 2 //                                      f(x) = (x>=0)?1:0                           f'(x) = (x!=0)?0:inf
+  , LOGISTIC        = 3 // (soft step)                          f(x) = 1/(1+exp(-x))                        f'(x) = f(x) (1 - f(x))
+  , HYPERBOLIC_TAN  = 4 //                                      f(x) = tanh(x) = (2/(1+exp(-2x))) - 1       f'(x) = 1 - f(x)^2
+  , ARC_TAN         = 5 //                                      f(x) = arctan(x)                            f'(x) = 1/(x^2+1)
+  , RELU            = 6 // (rectified linear unit)              f(x) = (x>=0)?x:0                           f'(x) = (x>=0)?1:0
+  , PRELU           = 7 // (parametric rectified linear unit)   f(x) = (x>=0)?x:a*x                         f'(x) = (x>=0)?1:a
+  , ELU             = 7 // (exponential linear unit)            f(x) = (x>=0)?x:a*(exp(x)-1)                f'(x) = (x>=0)?1:f(x)+a
+  , SOFT_PLUS       = 8 //                                      f(x) = ln(1+exp(x))                         f'(x) = 1/(1+exp(-x))
 };
 
 template<typename T>
-struct training_info
+struct cnn_training_info
 {
 
     quasi_newton_info<T> * quasi_newton;
 
     std::vector<long> n_nodes;
+    std::vector<LayerType> n_layer_type;
+    std::vector<ActivationType> n_activation_type;
+    std::vector<long> n_features;
+    std::vector<long> kx;
+    std::vector<long> ky;
+    std::vector<long> nx;
+    std::vector<long> ny;
     T **  activation_values;
     T **  deltas;
     long n_variables;
@@ -530,7 +68,7 @@ struct training_info
 
     int type;
 
-    training_info()
+    cnn_training_info()
     {
 
     }
@@ -722,12 +260,6 @@ struct training_info
 
 };
 
-template<typename T>
-T min(T a,T b)
-{
-    return (a<b)?a:b;
-}
-
 /*
 template<typename T>
 void ForwardReLU()
@@ -903,29 +435,8 @@ void ReverseConvolutionalUpdate()
 }
 */
 
-enum LayerType
-{
-    FULLY_CONNECTED_LAYER = 1 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l * y_l
-  , RELU_LAYER            = 2 // => y_l := max(0,y_l-1)               <= dEdy_l-1 := dEdy_l
-  , POOLING_LAYER         = 3 // => y_l := max(y_k)                   <= (l==k)?dEdy_l-1=dEdy_l:dEdy_l-1=0        
-  , CONVOLUTIONAL_LAYER   = 4 // => y_l := W_l * y_l-1                <= dEdy_l-1 := W_l * dEdy_l                 dEdW_l-1 := dEdy_l *_y_l
-};
-
-enum ActivationType
-{
-    IDENTITY        = 1 //                                      f(x) = x                                    f'(x) = 1
-  , BINARY_STEP     = 2 //                                      f(x) = (x>=0)?1:0                           f'(x) = (x!=0)?0:inf
-  , LOGISTIC        = 3 // (soft step)                          f(x) = 1/(1+exp(-x))                        f'(x) = f(x) (1 - f(x))
-  , HYPERBOLIC_TAN  = 4 //                                      f(x) = tanh(x) = (2/(1+exp(-2x))) - 1       f'(x) = 1 - f(x)^2
-  , ARC_TAN         = 5 //                                      f(x) = arctan(x)                            f'(x) = 1/(x^2+1)
-  , RELU            = 6 // (rectified linear unit)              f(x) = (x>=0)?x:0                           f'(x) = (x>=0)?1:0
-  , PRELU           = 7 // (parametric rectified linear unit)   f(x) = (x>=0)?x:a*x                         f'(x) = (x>=0)?1:a
-  , ELU             = 7 // (exponential linear unit)            f(x) = (x>=0)?x:a*(exp(x)-1)                f'(x) = (x>=0)?1:f(x)+a
-  , SOFT_PLUS       = 8 //                                      f(x) = ln(1+exp(x))                         f'(x) = 1/(1+exp(-x))
-};
-
 template<typename T>
-void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
+void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
     {
         for(long n=0;n<vrtx.size();n++)
@@ -939,7 +450,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
             // forward propagation
             for(long layer = 0; layer < g->n_layers; layer++)
             {
-                switch ( LayerType )
+                switch ( g->n_layer_type[layer] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -1049,6 +560,10 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                             // i : n_nodes[layer+1] = next size = N * dx * dy
                             long M = g->n_features[layer  ];
                             long N = g->n_features[layer+1];
+                            long kx = g->kx[layer];
+                            long ky = g->ky[layer];
+                            long nx = g->nx[layer];
+                            long ny = g->ny[layer];
                             long wx = (kx/2)*2;
                             long wy = (ky/2)*2;
                             long dx = nx - (kx/2)*2;
@@ -1131,7 +646,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 }
                 else
                 {
-                    switch ( LayerType )
+                    switch ( g->n_layer_type[layer] )
                     {
                         case FULLY_CONNECTED_LAYER :
                             {
@@ -1159,6 +674,10 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                                 // j : n_nodes[layer+2] = next size = N * dx * dy
                                 long M = g->n_features[layer+1];
                                 long N = g->n_features[layer+2];
+                                long kx = g->kx[layer];
+                                long ky = g->ky[layer];
+                                long nx = g->nx[layer];
+                                long ny = g->ny[layer];
                                 long wx = (kx/2)*2;
                                 long wy = (ky/2)*2;
                                 long dx = nx - (kx/2)*2;
@@ -1180,14 +699,14 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                                                 g->deltas[layer+1][i] +=
                                                     // dEdy
                                                     (
-                                                      dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*(oy+fy) + (ox+fx)],g->type)
-                                                    * g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]
+                                                      g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]
                                                     )
                                                     // W
                                                     * g->weights_neuron[layer+1][ky*n+ty][kx*m+tx] 
                                                     ;
                                             }
                                         }
+                                        g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],g->type);
                                     }
                                 }
 
@@ -1203,7 +722,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                     
                 
                 // biases
-                switch ( LayerType )
+                switch ( g->n_layer_type[layer] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -1243,7 +762,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                 }
                 
                 // neuron weights
-                switch ( LayerType )
+                switch ( g->n_layer_type[layer] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -1268,6 +787,16 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
                         }
                     case CONVOLUTIONAL_LAYER :
                         {
+                            long M = g->n_features[layer+1];
+                            long N = g->n_features[layer+2];
+                            long kx = g->kx[layer];
+                            long ky = g->ky[layer];
+                            long nx = g->nx[layer];
+                            long ny = g->ny[layer];
+                            long wx = (kx/2)*2;
+                            long wy = (ky/2)*2;
+                            long dx = nx - (kx/2)*2;
+                            long dy = ny - (ky/2)*2;
                             {
                                 for(long n=0;n<N;n++)
                                 {
@@ -1375,7 +904,7 @@ void training_worker(long n_threads,long iter,training_info<T> * g,std::vector<l
 }
 
 template<typename T>
-void training_worker_svrg(long n_threads,long iter,training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
+void cnn_training_worker_svrg(long n_threads,long iter,cnn_training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
     {
         long n = rand()%vrtx.size();
@@ -1567,7 +1096,7 @@ void training_worker_svrg(long n_threads,long iter,training_info<T> * g,std::vec
 }
 
 template<typename T>
-struct Perceptron
+struct ConvolutionalNeuralNetwork
 {
     quasi_newton_info<T> * quasi_newton;
 
@@ -1587,6 +1116,13 @@ struct Perceptron
     long n_outputs;
     long n_layers;
     std::vector<long> n_nodes;
+    std::vector<LayerType> n_layer_type;
+    std::vector<ActivationType> n_activation_type;
+    std::vector<long> n_features;
+    std::vector<long> kx;
+    std::vector<long> ky;
+    std::vector<long> nx;
+    std::vector<long> ny;
 
     bool continue_training;
     bool stop_training;
@@ -1647,7 +1183,15 @@ struct Perceptron
     T alpha;
     int sigmoid_type;
 
-    Perceptron(std::vector<long> p_nodes)
+    ConvolutionalNeuralNetwork ( std::vector <      long      > p_nodes 
+                               , std::vector <      LayerType > p_layer_type
+                               , std::vector < ActivationType > p_activation_type
+                               , std::vector <      long      > p_features
+                               , std::vector <      long      > p_kx
+                               , std::vector <      long      > p_ky
+                               , std::vector <      long      > p_nx
+                               , std::vector <      long      > p_ny
+                               )
     {
 
         quasi_newton = NULL;
@@ -1661,7 +1205,14 @@ struct Perceptron
         ierror = 1e10;
         perror = 1e10;
 
-        n_nodes = p_nodes;
+                  n_nodes =           p_nodes;
+             n_layer_type =      p_layer_type;
+        n_activation_type = p_activation_type;
+               n_features =        p_features;
+                       kx =              p_kx;
+                       ky =              p_ky;
+                       nx =              p_nx;
+                       ny =              p_ny;
         n_inputs = n_nodes[0];
         n_outputs = n_nodes[n_nodes.size()-1];
         n_layers = n_nodes.size()-2; // first and last numbers and output and input dimensions, so we have n-2 layers
@@ -1842,13 +1393,13 @@ struct Perceptron
             if(q_newton == NULL)
             {
                 quasi_newton = new quasi_newton_info<T>();
-                quasi_newton->alpha = alpha;
-                quasi_newton->n_nodes = n_nodes;
-                quasi_newton->n_layers = n_layers;
-                quasi_newton->weights_neuron = weights_neuron;
-                quasi_newton->weights_bias = weights_bias;
+                quasi_newton->alpha                 = alpha;
+                quasi_newton->n_nodes               = n_nodes;
+                quasi_newton->n_layers              = n_layers;
+                quasi_newton->weights_neuron        = weights_neuron;
+                quasi_newton->weights_bias          = weights_bias;
+                quasi_newton->quasi_newton_update   = true;
                 quasi_newton->init_QuasiNewton();
-                quasi_newton->quasi_newton_update = true;
             }
             else
             {
@@ -1868,23 +1419,30 @@ struct Perceptron
             vrtx[i%vrtx.size()].push_back(i);
           }
         }
-        std::vector<training_info<T>*> g;
+        std::vector<cnn_training_info<T>*> g;
         for(long i=0;i<boost::thread::hardware_concurrency();i++)
         {
-          g.push_back(new training_info<T>());
+          g.push_back(new cnn_training_info<T>());
         }
         for(long thread=0;thread<g.size();thread++)
         {
-          g[thread]->quasi_newton = quasi_newton;
-          g[thread]->n_nodes = n_nodes;
-          g[thread]->n_elements = n_elements;
-          g[thread]->n_variables = n_variables;
-          g[thread]->n_labels = n_labels;
-          g[thread]->n_layers = n_layers;
-          g[thread]->weights_neuron = weights_neuron;
-          g[thread]->weights_bias = weights_bias;
-          g[thread]->epsilon = epsilon;
-          g[thread]->type = get_sigmoid();
+          g[thread]->quasi_newton       = quasi_newton;
+          g[thread]->n_nodes            = n_nodes;
+          g[thread]->n_layer_type       = n_layer_type;
+          g[thread]->n_activation_type  = n_activation_type;
+          g[thread]->n_features         = n_features;
+          g[thread]->kx                 = kx;
+          g[thread]->ky                 = ky;
+          g[thread]->nx                 = nx;
+          g[thread]->ny                 = ny;
+          g[thread]->n_elements         = n_elements;
+          g[thread]->n_variables        = n_variables;
+          g[thread]->n_labels           = n_labels;
+          g[thread]->n_layers           = n_layers;
+          g[thread]->weights_neuron     = weights_neuron;
+          g[thread]->weights_bias       = weights_bias;
+          g[thread]->epsilon            = epsilon;
+          g[thread]->type               = get_sigmoid();
           g[thread]->init(alpha);
         }
 
@@ -1906,9 +1464,9 @@ struct Perceptron
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->reset();
-              if(iter%100==0)
+              //if(iter%100==0)
               {
-                threads.push_back ( new boost::thread ( training_worker<T>
+                threads.push_back ( new boost::thread ( cnn_training_worker<T>
                                                       , vrtx.size()
                                                       , iter,g[thread]
                                                       , vrtx[thread]
@@ -1917,17 +1475,17 @@ struct Perceptron
                                                       )
                                   );
               }
-              else
-              {
-                threads.push_back ( new boost::thread ( training_worker_svrg<T>
-                                                      , vrtx.size()
-                                                      , iter,g[thread]
-                                                      , vrtx[thread]
-                                                      , variables
-                                                      , labels
-                                                      )
-                                  );
-              }
+              //else
+              //{
+              //  threads.push_back ( new boost::thread ( cnn_training_worker_svrg<T>
+              //                                        , vrtx.size()
+              //                                        , iter,g[thread]
+              //                                        , vrtx[thread]
+              //                                        , variables
+              //                                        , labels
+              //                                        )
+              //                    );
+              //}
             }
             usleep(10000);
             for(long thread=0;thread<vrtx.size();thread++)
