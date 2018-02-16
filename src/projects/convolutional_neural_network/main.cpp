@@ -90,12 +90,12 @@ int main(int argc,char ** argv)
       
       std::vector<long> nodes;
       nodes.push_back(nx*ny); // inputs
-      nodes.push_back(12*5*5/*16*/); // hidden layer
+      nodes.push_back(12*5/*16*/); // hidden layer
       nodes.push_back(1); // output layer
       nodes.push_back(1); // outputs
       std::vector<LayerType> layer_type;
-      layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(CONVOLUTIONAL_LAYER);// layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       std::vector<ActivationType> activation_type;
@@ -104,10 +104,10 @@ int main(int argc,char ** argv)
       activation_type.push_back(LOGISTIC);
       activation_type.push_back(LOGISTIC);
       std::vector<long> features;
+      features.push_back(1);
       features.push_back(12);
-      features.push_back(12);
-      features.push_back(12);
-      features.push_back(12);
+      features.push_back(1);
+      features.push_back(1);
       std::vector<long> layer_kx;
       layer_kx.push_back(5);
       layer_kx.push_back(5);

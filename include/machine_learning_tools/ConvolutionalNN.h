@@ -558,16 +558,16 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
 
                             // j : n_nodes[layer  ] = curr size = M * nx * ny
                             // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer  ];
-                            long N = g->n_features[layer+1];
+                            long M = g->n_features[layer+1];
+                            long N = g->n_features[layer  ];
                             long kx = g->kx[layer];
                             long ky = g->ky[layer];
                             long nx = g->nx[layer];
                             long ny = g->ny[layer];
-                            long wx = (kx/2)*2;
-                            long wy = (ky/2)*2;
-                            long dx = nx - (kx/2)*2;
-                            long dy = ny - (ky/2)*2;
+                            long wx = (kx/2);
+                            long wy = (ky/2);
+                            long dx = nx - wx*2;
+                            long dy = ny - wy*2;
 
                             for(long m=0,i=0;m<M;m++)
                             {
@@ -582,8 +582,23 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                         for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
                                         for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
                                         {
+                                            //std::cout << "W size:" 
+                                            //          << ky*N 
+                                            //          << "x" 
+                                            //          << kx*M 
+                                            //          << " = " 
+                                            //          << ky*n+ty 
+                                            //          << "x" 
+                                            //          << kx*m+tx 
+                                            //          << " : "
+                                            //          << g->n_nodes[layer+1]
+                                            //          << "|"
+                                            //          << g->n_nodes[layer]
+                                            //          << " : " 
+                                            //          << (nx*ny)*m + nx*(iy+fy) + (ix+fx)
+                                            //          << std::endl;
                                             // W * y
-                                            sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx] 
+                                            sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
                                                  * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
                                         }
                                     }
@@ -897,10 +912,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                     g->mu_partial_weights_neuron[layer][i][j] = g->partial_weights_neuron[layer][i][j];
                 }
             }
-
         }
     }
-
 }
 
 template<typename T>
