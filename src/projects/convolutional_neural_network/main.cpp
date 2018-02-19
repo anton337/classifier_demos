@@ -94,7 +94,9 @@ int main(int argc,char ** argv)
       nodes.push_back(1); // output layer
       nodes.push_back(1); // outputs
       std::vector<LayerType> layer_type;
+      layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(CONVOLUTIONAL_LAYER);// layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);

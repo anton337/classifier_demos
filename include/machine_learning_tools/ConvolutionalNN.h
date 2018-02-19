@@ -450,7 +450,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
             // forward propagation
             for(long layer = 0; layer < g->n_layers; layer++)
             {
-                switch ( g->n_layer_type[layer] )
+                switch ( g->n_layer_type[layer+1] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -558,8 +558,9 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
 
                             // j : n_nodes[layer  ] = curr size = M * nx * ny
                             // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer+1];
-                            long N = g->n_features[layer  ];
+                            long M = g->n_features[layer  ];
+                            long N = g->n_features[layer+1];
+                            std::cout << "M:" << M << "   N:" << N << std::endl;
                             long kx = g->kx[layer];
                             long ky = g->ky[layer];
                             long nx = g->nx[layer];
@@ -574,7 +575,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 for(long oy=0;oy<dy;oy++)
                                 for(long ox=0;ox<dx;ox++,i++)
                                 {
-                                    T sum = g->weights_bias[layer][i];
+                                    //T sum = g->weights_bias[layer][i];
                                     for(long n=0;n<N;n++)
                                     {
                                         for(long iy=wy;iy+wy<ny;iy++)
@@ -598,18 +599,18 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                             //          << (nx*ny)*m + nx*(iy+fy) + (ix+fx)
                                             //          << std::endl;
                                             // W * y
-                                            sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                 * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                                            //sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                            //     * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
                                         }
                                     }
-                                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                                    //g->activation_values[layer+1][i] = sigmoid(sum,g->type);
                                 }
                             }
                             break;
                         }
                     default :
                         {
-                            std::cout << "Layer type not defined." << std::endl;
+                            std::cout << "1. Layer type not defined." << std::endl;
                             exit(1);
                         }
                 }
@@ -619,21 +620,25 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
             T partial_error = 0;
             long max_i = 0;
             T max_val = 0;
+            //std::cout << g->n_nodes[last_layer] << std::endl;
+            //std::cout << g->deltas[0][0] << std::endl;
+            //std::cout << g->deltas[1][0] << std::endl;
+            //std::cout << g->deltas[2][0] << std::endl;
             for(long i=0;i<g->n_nodes[last_layer];i++)
             {
                 g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
-                if(fabs(g->deltas[last_layer+1][i])>max_val)
-                {
-                    max_i = i;
-                    max_val = fabs(g->deltas[last_layer+1][i]);
-                }
+                //if(fabs(g->deltas[last_layer+1][i])>max_val)
+                //{
+                //    max_i = i;
+                //    max_val = fabs(g->deltas[last_layer+1][i]);
+                //}
             }
             for(long i=0;i<g->n_nodes[last_layer];i++)
             {
-                if(i!=max_i)
-                {
-                    //g->deltas[last_layer+1][i] = 0;
-                }
+                //if(i!=max_i)
+                //{
+                //    //g->deltas[last_layer+1][i] = 0;
+                //}
                 partial_error += fabs(g->deltas[last_layer+1][i]);
             }
             g->partial_error += partial_error;
@@ -661,7 +666,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 }
                 else
                 {
-                    switch ( g->n_layer_type[layer] )
+                    switch ( g->n_layer_type[layer+1] )
                     {
                         case FULLY_CONNECTED_LAYER :
                             {
@@ -729,7 +734,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             }
                         default :
                             {
-                                std::cout << "Layer type not defined." << std::endl;
+                                std::cout << "2. Layer type not defined." << std::endl;
                                 exit(1);
                             }
                     }
@@ -737,7 +742,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                     
                 
                 // biases
-                switch ( g->n_layer_type[layer] )
+                switch ( g->n_layer_type[layer+1] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -771,13 +776,13 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     default :
                         {
-                            std::cout << "Layer type not defined." << std::endl;
+                            std::cout << "3. Layer type not defined." << std::endl;
                             exit(1);
                         }
                 }
                 
                 // neuron weights
-                switch ( g->n_layer_type[layer] )
+                switch ( g->n_layer_type[layer+1] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -863,7 +868,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     default :
                         {
-                            std::cout << "Layer type not defined." << std::endl;
+                            std::cout << "4. Layer type not defined." << std::endl;
                             exit(1);
                         }
                 }
