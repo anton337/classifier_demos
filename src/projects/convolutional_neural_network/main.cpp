@@ -43,7 +43,7 @@ void test_cnn()
         }
       }
     }
-    models[J] -> train(0,1.0,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,1,viz_in_dat->viz_dat,out_dat);
+    models[J] -> train(0,0.1,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,1,viz_in_dat->viz_dat,out_dat);
     //std::stringstream ss;
     //ss << output_dir << "/mnist-" << (char)(65+J) << ".ann";
     //dump_to_file(models[J],ss.str());
@@ -77,7 +77,7 @@ int main(int argc,char ** argv)
       long nx = 28;
       long ny = 28;
       binaryReader<double> reader;
-      double * dat = reader.readBinary(16,nx,ny,argv[1]);
+      double * dat = reader.readBinary(16,nx,ny,argv[1],1000);
       viz_in_dat = new VisualizeDataArray < double > ( reader.get_size()
                                                      , nx*ny
                                                      , nx*ny
@@ -90,12 +90,22 @@ int main(int argc,char ** argv)
       
       std::vector<long> nodes;
       nodes.push_back(nx*ny); // inputs
-      nodes.push_back(12*5/*16*/); // hidden layer
+      nodes.push_back(2704/*16*/); // hidden layer
+      nodes.push_back(3456/*16*/); // hidden layer
+      nodes.push_back(3872/*16*/); // hidden layer
+      nodes.push_back(4000/*16*/); // hidden layer
+      nodes.push_back(32/*16*/); // hidden layer
+      nodes.push_back(8/*16*/); // hidden layer
       nodes.push_back(1); // output layer
       nodes.push_back(1); // outputs
       std::vector<LayerType> layer_type;
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(CONVOLUTIONAL_LAYER);// layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(CONVOLUTIONAL_LAYER);// layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(CONVOLUTIONAL_LAYER);// layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(CONVOLUTIONAL_LAYER);// layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(FULLY_CONNECTED_LAYER);
+      layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
@@ -105,29 +115,86 @@ int main(int argc,char ** argv)
       activation_type.push_back(LOGISTIC);
       activation_type.push_back(LOGISTIC);
       activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
+      activation_type.push_back(LOGISTIC);
       std::vector<long> features;
       features.push_back(1);
-      features.push_back(12);
+      features.push_back(4);
+      features.push_back(6);
+      features.push_back(8);
+      features.push_back(10);
       features.push_back(1);
       features.push_back(1);
       std::vector<long> layer_kx;
-      layer_kx.push_back(5);
-      layer_kx.push_back(5);
-      layer_kx.push_back(5);
-      layer_kx.push_back(5);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
+      layer_kx.push_back(3);
       std::vector<long> layer_ky;
-      layer_ky.push_back(5);
-      layer_ky.push_back(5);
-      layer_ky.push_back(5);
-      layer_ky.push_back(5);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
+      layer_ky.push_back(3);
       std::vector<long> layer_nx;
       layer_nx.push_back(nx);
-      layer_nx.push_back(nx);
+      layer_nx.push_back(nx-2);
+      layer_nx.push_back(nx-4);
+      layer_nx.push_back(nx-6);
+      layer_nx.push_back(nx-8);
+      layer_nx.push_back(nx-10);
+      layer_nx.push_back(nx-12);
+      layer_nx.push_back(nx-14);
+      layer_nx.push_back(nx-16);
+      layer_nx.push_back(nx-18);
+      layer_nx.push_back(nx-20);
+      layer_nx.push_back(nx-22);
       layer_nx.push_back(nx);
       layer_nx.push_back(nx);
       std::vector<long> layer_ny;
       layer_ny.push_back(ny);
-      layer_ny.push_back(ny);
+      layer_ny.push_back(ny-2);
+      layer_ny.push_back(ny-4);
+      layer_ny.push_back(ny-6);
+      layer_ny.push_back(ny-8);
+      layer_ny.push_back(ny-10);
+      layer_ny.push_back(ny-12);
+      layer_ny.push_back(ny-14);
+      layer_ny.push_back(ny-16);
+      layer_ny.push_back(ny-18);
+      layer_ny.push_back(ny-20);
+      layer_ny.push_back(ny-22);
       layer_ny.push_back(ny);
       layer_ny.push_back(ny);
       //for(int i=0;i<26;i++)
