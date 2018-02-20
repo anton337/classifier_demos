@@ -40,11 +40,12 @@ struct cnn_training_info
     std::vector<LayerType> n_layer_type;
     std::vector<ActivationType> n_activation_type;
     std::vector<long> n_features;
-    std::vector<long> pooling_factor;
     std::vector<long> kx;
     std::vector<long> ky;
     std::vector<long> nx;
     std::vector<long> ny;
+    std::vector<long> pooling_factorx;
+    std::vector<long> pooling_factory;
     T **  activation_values;
     T **  deltas;
     long n_variables;
@@ -114,22 +115,24 @@ struct cnn_training_info
                             std::cout << "pooling layer has to have the same number of input/output features" << std::endl;
                             exit(1);
                         }
-                        long dx = nx[layer-1] / pooling_factor[layer];
-                        if(nx[layer-1] != pooling_factor[layer]*nx[layer])
+                        long dx = nx[layer-1] / pooling_factorx[layer];
+                        if(nx[layer-1] != pooling_factorx[layer]*nx[layer])
                         {
-                            std::cout << "pooling layer: " << layer << " should be: " << dx << std::endl;
+                            std::cout << "pooling layer nx: " << layer << " should be: " << dx << std::endl;
+                            exit(1);
                         }
-                        long dy = ny[layer-1] / pooling_factor[layer];
-                        if(ny[layer-1] != pooling_factor[layer]*ny[layer])
+                        long dy = ny[layer-1] / pooling_factory[layer];
+                        if(ny[layer-1] != pooling_factory[layer]*ny[layer])
                         {
-                            std::cout << "pooling layer: " << layer << " should be: " << dy << std::endl;
+                            std::cout << "pooling layer ny: " << layer << " should be: " << dy << std::endl;
+                            exit(1);
                         }
                         activation_values [layer] = new T[N*dx*dy];
                         break;
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "1. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -169,7 +172,7 @@ struct cnn_training_info
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "2. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -241,59 +244,30 @@ struct cnn_training_info
                             std::cout << "input layer cannot be convolutional" << std::endl;
                             exit(1);
                         }
-                        partial_weights_bias[layer] = new T[N*dx*dy];
-                        mu_partial_weights_bias[layer] = new T[N*dx*dy];
-                        mu_weights_bias[layer] = new T[N*dx*dy];
-                        for(long i=0;i<N*dx*dy;i++)
-                        {
-                            partial_weights_bias[layer][i] = 0;
-                            mu_partial_weights_bias[layer][i] = 0;
-                            mu_weights_bias[layer][i] = 0;
-                        }
+                        partial_weights_bias[layer] = NULL;//new T[N*dx*dy];
+                        mu_partial_weights_bias[layer] = NULL;//new T[N*dx*dy];
+                        mu_weights_bias[layer] = NULL;//new T[N*dx*dy];
+                        // for(long i=0;i<N*dx*dy;i++)
+                        // {
+                        //     partial_weights_bias[layer][i] = 0;
+                        //     mu_partial_weights_bias[layer][i] = 0;
+                        //     mu_weights_bias[layer][i] = 0;
+                        // }
                         break;
                     }
                 case POOLING_LAYER :
                     {
-                        long M = n_features[layer-1];
-                        long N = n_features[layer];
-                        long wx = (kx[layer-1]/2);
-                        long wy = (ky[layer-1]/2);
-                        long dx = nx[layer-1] - wx*2;
-                        long dy = ny[layer-1] - wy*2;
-                        partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
-                        mu_partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
-                        mu_weights_neuron[layer] = new T*[n_nodes[layer+1]];
-                        for(long i=0;i<n_nodes[layer+1];i++)
-                        {
-                            partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
-                            mu_partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
-                            mu_weights_neuron[layer][i] = new T[n_nodes[layer]];
-                            for(long j=0;j<n_nodes[layer];j++)
-                            {
-                                partial_weights_neuron[layer][i][j] = 0;
-                                mu_partial_weights_neuron[layer][i][j] = 0;
-                                mu_weights_neuron[layer][i][j] = 0;
-                            }
-                        }
-                        if(layer-1<0)
-                        {
-                            std::cout << "input layer cannot be convolutional" << std::endl;
-                            exit(1);
-                        }
-                        partial_weights_bias[layer] = new T[N*dx*dy];
-                        mu_partial_weights_bias[layer] = new T[N*dx*dy];
-                        mu_weights_bias[layer] = new T[N*dx*dy];
-                        for(long i=0;i<N*dx*dy;i++)
-                        {
-                            partial_weights_bias[layer][i] = 0;
-                            mu_partial_weights_bias[layer][i] = 0;
-                            mu_weights_bias[layer][i] = 0;
-                        }
+                        partial_weights_neuron[layer] = NULL;
+                        mu_partial_weights_neuron[layer] = NULL;
+                        mu_weights_neuron[layer] = NULL;
+                        partial_weights_bias[layer] = NULL;
+                        mu_partial_weights_bias[layer] = NULL;
+                        mu_weights_bias[layer] = NULL;
                         break;
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "3. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -340,36 +314,19 @@ struct cnn_training_info
                                 partial_weights_neuron[layer][i][j] = 0;
                             }
                         }
-                        for(long i=0;i<N*dx*dy;i++)
-                        {
-                            partial_weights_bias[layer][i] = 0;
-                        }
+                        // for(long i=0;i<N*dx*dy;i++)
+                        // {
+                        //     partial_weights_bias[layer][i] = 0;
+                        // }
                         break;
                     }
                 case POOLING_LAYER :
                     {
-                        long M = n_features[layer-1];
-                        long N = n_features[layer];
-                        long wx = (kx[layer-1]/2);
-                        long wy = (ky[layer-1]/2);
-                        long dx = nx[layer-1] - wx*2;
-                        long dy = ny[layer-1] - wy*2;
-                        for(long i=0;i<n_nodes[layer+1];i++)
-                        {
-                            for(long j=0;j<n_nodes[layer];j++)
-                            {
-                                partial_weights_neuron[layer][i][j] = 0;
-                            }
-                        }
-                        for(long i=0;i<N*dx*dy;i++)
-                        {
-                            partial_weights_bias[layer][i] = 0;
-                        }
                         break;
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "4. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -442,16 +399,22 @@ struct cnn_training_info
         {
             for(long layer = 0,k = 0;layer < n_layers;layer++)
             {
-                for(long i=0;i<n_nodes[layer+1];i++)
+                if(weights_neuron[layer] != NULL)
                 {
-                    for(long j=0;j<n_nodes[layer];j++,k++)
+                    for(long i=0;i<n_nodes[layer+1];i++)
                     {
-                        weights_neuron[layer][i][j] += quasi_newton->dX[k];
+                        for(long j=0;j<n_nodes[layer];j++,k++)
+                        {
+                            weights_neuron[layer][i][j] += quasi_newton->dX[k];
+                        }
                     }
                 }
-                for(long i=0;i<n_nodes[layer+1];i++,k++)
+                if(weights_bias[layer] != NULL)
                 {
-                    weights_bias[layer][i] += quasi_newton->dX[k];
+                    for(long i=0;i<n_nodes[layer+1];i++,k++)
+                    {
+                        weights_bias[layer][i] += quasi_newton->dX[k];
+                    }
                 }
             }
         }
@@ -459,16 +422,22 @@ struct cnn_training_info
         {
             for(long layer = 0,k = 0;layer < n_layers;layer++)
             {
-                for(long i=0;i<n_nodes[layer+1];i++)
+                if(weights_neuron[layer] != NULL)
                 {
-                    for(long j=0;j<n_nodes[layer];j++,k++)
+                    for(long i=0;i<n_nodes[layer+1];i++)
                     {
-                        weights_neuron[layer][i][j] += epsilon * quasi_newton->grad_tmp[k];
+                        for(long j=0;j<n_nodes[layer];j++,k++)
+                        {
+                            weights_neuron[layer][i][j] += epsilon * quasi_newton->grad_tmp[k];
+                        }
                     }
                 }
-                for(long i=0;i<n_nodes[layer+1];i++,k++)
+                if(weights_bias[layer] != NULL)
                 {
-                    weights_bias[layer][i] += epsilon * quasi_newton->grad_tmp[k];
+                    for(long i=0;i<n_nodes[layer+1];i++,k++)
+                    {
+                        weights_bias[layer][i] += epsilon * quasi_newton->grad_tmp[k];
+                    }
                 }
             }
         }
@@ -476,16 +445,22 @@ struct cnn_training_info
         {
             for(long layer = 0,k = 0;layer < n_layers;layer++)
             {
-                for(long i=0;i<n_nodes[layer+1];i++)
+                if(weights_neuron[layer] != NULL)
                 {
-                    for(long j=0;j<n_nodes[layer];j++,k++)
+                    for(long i=0;i<n_nodes[layer+1];i++)
                     {
-                        weights_neuron[layer][i][j] += epsilon * partial_weights_neuron[layer][i][j];
+                        for(long j=0;j<n_nodes[layer];j++,k++)
+                        {
+                            weights_neuron[layer][i][j] += epsilon * partial_weights_neuron[layer][i][j];
+                        }
                     }
                 }
-                for(long i=0;i<n_nodes[layer+1];i++,k++)
+                if(weights_bias[layer] != NULL)
                 {
-                    weights_bias[layer][i] += epsilon * partial_weights_bias[layer][i];
+                    for(long i=0;i<n_nodes[layer+1];i++,k++)
+                    {
+                        weights_bias[layer][i] += epsilon * partial_weights_bias[layer][i];
+                    }
                 }
             }
         }
@@ -684,7 +659,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
             // forward propagation
             for(long layer = 0; layer < g->n_layers; layer++)
             {
-                switch ( g->n_layer_type[layer+1] )
+                switch ( g->n_layer_type[layer] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -792,71 +767,71 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
 
                             // j : n_nodes[layer  ] = curr size = M * nx * ny
                             // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer];
-                            long N = g->n_features[layer+1];
-                            long kx = g->kx[layer];
-                            long ky = g->ky[layer];
-                            long nx = g->nx[layer];
-                            long ny = g->ny[layer];
-                            long wx = (kx/2);
-                            long wy = (ky/2);
-                            long dx = nx - wx*2;
-                            long dy = ny - wy*2;
+                            //long M = g->n_features[layer];
+                            //long N = g->n_features[layer+1];
+                            //long kx = g->kx[layer];
+                            //long ky = g->ky[layer];
+                            //long nx = g->nx[layer];
+                            //long ny = g->ny[layer];
+                            //long wx = (kx/2);
+                            //long wy = (ky/2);
+                            //long dx = nx - wx*2;
+                            //long dy = ny - wy*2;
 
-                            for(long m=0,i=0;m<M;m++)
-                            {
-                                for(long oy=0;oy<dy;oy++)
-                                for(long ox=0;ox<dx;ox++,i++)
-                                {
-                                    T sum = 0.5;//g->weights_bias[layer][i];
-                                    for(long n=0;n<N;n++)
-                                    {
-                                        for(long iy=wy;iy+wy<ny;iy++)
-                                        for(long ix=wx;ix+wx<nx;ix++)
-                                        for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
-                                        for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
-                                        {
-                                            // W * y
-                                            sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                 * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
-                                        }
-                                    }
-                                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
-                                }
-                            }
+                            //for(long m=0,i=0;m<M;m++)
+                            //{
+                            //    for(long oy=0;oy<dy;oy++)
+                            //    for(long ox=0;ox<dx;ox++,i++)
+                            //    {
+                            //        T sum = 0.5;//g->weights_bias[layer][i];
+                            //        for(long n=0;n<N;n++)
+                            //        {
+                            //            for(long iy=wy;iy+wy<ny;iy++)
+                            //            for(long ix=wx;ix+wx<nx;ix++)
+                            //            for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                            //            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                            //            {
+                            //                // W * y
+                            //                sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
+                            //                     * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                            //            }
+                            //        }
+                            //        g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                            //    }
+                            //}
                             break;
                         }
                     case POOLING_LAYER :
                         {
                             // j : n_nodes[layer  ] = curr size = M * nx * ny
                             // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer];
-                            long nx = g->nx[layer];
-                            long ny = g->ny[layer];
-                            long factorx = g->pooling_factorx[layer];
-                            long factory = g->pooling_factory[layer];
-                            long dx = nx / factorx;
-                            long dy = ny / factory;
-                            T tmp_val,max_val;
+                            //long M = g->n_features[layer];
+                            //long nx = g->nx[layer];
+                            //long ny = g->ny[layer];
+                            //long factorx = g->pooling_factorx[layer];
+                            //long factory = g->pooling_factory[layer];
+                            //long dx = nx / factorx;
+                            //long dy = ny / factory;
+                            //T tmp_val,max_val;
 
-                            for(long m=0,i=0;m<M;m++)
-                            {
-                                for(long y=0,oy=0;y<ny;y+=factory,oy++)
-                                for(long x=0,ox=0;x<nx;x+=factorx,ox++)
-                                {
-                                    max_val = -100000000;
-                                    for(long ty=0;ty<factory;ty++)
-                                    for(long tx=0;tx<factorx;tx++)
-                                    {
-                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*y+x];
-                                        if(tmp_val>max_val)
-                                        {
-                                          max_val = tmp_val;
-                                        }
-                                    }
-                                    g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = max_val;
-                                }
-                            }
+                            //for(long m=0,i=0;m<M;m++)
+                            //{
+                            //    for(long y=0,oy=0;y<ny;y+=factory,oy++)
+                            //    for(long x=0,ox=0;x<nx;x+=factorx,ox++)
+                            //    {
+                            //        max_val = -100000000;
+                            //        for(long ty=0;ty<factory;ty++)
+                            //        for(long tx=0;tx<factorx;tx++)
+                            //        {
+                            //            tmp_val = g->activation_values[layer][m*nx*nx+nx*y+x];
+                            //            if(tmp_val>max_val)
+                            //            {
+                            //              max_val = tmp_val;
+                            //            }
+                            //        }
+                            //        g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = max_val;
+                            //    }
+                            //}
                             break;
                         }
                     default :
@@ -904,7 +879,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 }
                 else
                 {
-                    switch ( g->n_layer_type[layer+2] )
+                    switch ( g->n_layer_type[layer+1] )
                     {
                         case FULLY_CONNECTED_LAYER :
                             {
@@ -1014,7 +989,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                     
                 
                 // biases
-                switch ( g->n_layer_type[layer+1] )
+                switch ( g->n_layer_type[layer] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -1033,17 +1008,21 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case CONVOLUTIONAL_LAYER :
                         {
-                            for(long i=0;i<g->n_nodes[layer+1];i++)
-                            {
-                                    g->partial_weights_bias[layer][i] += 
-                                        ( 
-                                            (
-                                                g->deltas[layer+1][i] 
-                                            )
-                                          
-                                        - g->partial_weights_bias[layer][i] 
-                                        ) * avg_factor;
-                            }
+                            //for(long i=0;i<g->n_nodes[layer+1];i++)
+                            //{
+                            //        g->partial_weights_bias[layer][i] += 
+                            //            ( 
+                            //                (
+                            //                    g->deltas[layer+1][i] 
+                            //                )
+                            //              
+                            //            - g->partial_weights_bias[layer][i] 
+                            //            ) * avg_factor;
+                            //}
+                            break;
+                        }
+                    case POOLING_LAYER :
+                        {
                             break;
                         }
                     default :
@@ -1054,7 +1033,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 }
                 
                 // neuron weights
-                switch ( g->n_layer_type[layer+1] )
+                switch ( g->n_layer_type[layer] )
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
@@ -1135,6 +1114,10 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     }
                                 }
                             }
+                            break;
+                        }
+                    case POOLING_LAYER :
+                        {
                             break;
                         }
                     default :
@@ -1246,7 +1229,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "5. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -1476,6 +1459,8 @@ struct ConvolutionalNeuralNetwork
     std::vector<long> ky;
     std::vector<long> nx;
     std::vector<long> ny;
+    std::vector<long> pooling_factorx;
+    std::vector<long> pooling_factory;
 
     bool continue_training;
     bool stop_training;
@@ -1544,6 +1529,8 @@ struct ConvolutionalNeuralNetwork
                                , std::vector <      long      > p_ky
                                , std::vector <      long      > p_nx
                                , std::vector <      long      > p_ny
+                               , std::vector <      long      > p_pooling_factorx
+                               , std::vector <      long      > p_pooling_factory
                                )
     {
 
@@ -1566,6 +1553,8 @@ struct ConvolutionalNeuralNetwork
                        ky =              p_ky;
                        nx =              p_nx;
                        ny =              p_ny;
+          pooling_factorx = p_pooling_factorx;
+          pooling_factory = p_pooling_factory;
         n_inputs = n_nodes[0];
         n_outputs = n_nodes[n_nodes.size()-1];
         n_layers = n_nodes.size()-2; // first and last numbers and output and input dimensions, so we have n-2 layers
@@ -1605,7 +1594,7 @@ struct ConvolutionalNeuralNetwork
                         long dy = ny[layer-1] - wy*2;
                         if(n_nodes[layer] != N*dx*dy)
                         {
-                            std::cout << "n_nodes convolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
+                            std::cout << "layer " << layer << " n_nodes convolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
                             exit(1);
                         }
                         if(nx[layer] != dx)
@@ -1624,9 +1613,43 @@ struct ConvolutionalNeuralNetwork
                         activation_values3[layer] = new T[N*dx*dy];
                         break;
                     }
+                case POOLING_LAYER :
+                    {
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        if(M != N)
+                        {
+                            std::cout << "pooling layer has to have the same number of input/output features" << std::endl;
+                            exit(1);
+                        }
+                        long dx = nx[layer-1] / pooling_factorx[layer];
+                        if(nx[layer-1] != pooling_factorx[layer]*nx[layer])
+                        {
+                            std::cout << "pooling layer nx: " << layer << " should be: " << dx << std::endl;
+                            exit(1);
+                        }
+                        long dy = ny[layer-1] / pooling_factorx[layer];
+                        if(ny[layer-1] != pooling_factory[layer]*ny[layer])
+                        {
+                            std::cout << "pooling layer nx: " << layer << " should be: " << dy << std::endl;
+                            exit(1);
+                        }
+                        if(n_nodes[layer-1] % (pooling_factorx[layer]*pooling_factory[layer]) != 0)
+                        {
+                            std::cout << "pooling layer n_nodes: " << layer-1 << " should be divisible by: " << (pooling_factorx[layer]*pooling_factory[layer]) << std::endl;
+                            exit(1);
+                        }
+                        if(n_nodes[layer-1] != pooling_factorx[layer]*pooling_factory[layer]*n_nodes[layer])
+                        {
+                            std::cout << "pooling layer n_nodes: " << layer << " should be: " << n_nodes[layer-1]/(pooling_factorx[layer]*pooling_factory[layer]) << std::endl;
+                            exit(1);
+                        }
+                        activation_values [layer] = new T[N*dx*dy];
+                        break;
+                    }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "6. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -1645,17 +1668,18 @@ struct ConvolutionalNeuralNetwork
                 case CONVOLUTIONAL_LAYER :
                     {
                         long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
+                        deltas[layer] = new T[M*nx[layer]*nx[layer]];
+                        break;
+                    }
+                case POOLING_LAYER :
+                    {
+                        long M = n_features[layer];
                         deltas[layer] = new T[M*nx[layer]*nx[layer]];
                         break;
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "7. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -1706,16 +1730,22 @@ struct ConvolutionalNeuralNetwork
                         long wy = (ky[layer-1]/2);
                         long dx = nx[layer-1] - wx*2;
                         long dy = ny[layer-1] - wy*2;
-                        weights_bias[layer] = new T[N*dx*dy];
-                        for(long i=0;i<N*dx*dy;i++)
-                        {
-                            weights_bias[layer][i] = 1.0e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
-                        }
+                        weights_bias[layer] = NULL;//new T[N*dx*dy];
+                        //for(long i=0;i<N*dx*dy;i++)
+                        //{
+                        //    weights_bias[layer][i] = 1.0e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
+                        //}
+                        break;
+                    }
+                case POOLING_LAYER :
+                    {
+                        weights_neuron[layer] = NULL;
+                        weights_bias[layer] = NULL;
                         break;
                     }
                 default :
                     {
-                        std::cout << "Undefined Layer Type. " << std::endl;
+                        std::cout << "8. Undefined Layer Type. " << std::endl;
                         exit(1);
                         break;
                     }
@@ -1905,6 +1935,8 @@ struct ConvolutionalNeuralNetwork
           g[thread]->ky                 = ky;
           g[thread]->nx                 = nx;
           g[thread]->ny                 = ny;
+          g[thread]->pooling_factorx    = pooling_factorx;
+          g[thread]->pooling_factory    = pooling_factory;
           g[thread]->n_elements         = n_elements;
           g[thread]->n_variables        = n_variables;
           g[thread]->n_labels           = n_labels;
