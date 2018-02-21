@@ -77,7 +77,7 @@ int main(int argc,char ** argv)
       long nx = 28;
       long ny = 28;
       binaryReader<double> reader;
-      double * dat = reader.readBinary(16,nx,ny,argv[1],32*10);
+      double * dat = reader.readBinary(16,nx,ny,argv[1],32*100);
       viz_in_dat = new VisualizeDataArray < double > ( reader.get_size()
                                                      , nx*ny
                                                      , nx*ny
