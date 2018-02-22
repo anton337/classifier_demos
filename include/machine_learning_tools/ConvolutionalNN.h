@@ -601,13 +601,14 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             long wy = (ky/2);
                             long dx = nx - wx*2;
                             long dy = ny - wy*2;
+                            T factor = 1.0 / (kx*ky);
 
                             for(long m=0,i=0;m<M;m++)
                             {
                                 for(long oy=0;oy<dy;oy++)
                                 for(long ox=0;ox<dx;ox++,i++)
                                 {
-                                    T sum = 0.0;//g->weights_bias[layer][i];
+                                    T sum = 0.5;//g->weights_bias[layer][i];
                                     for(long n=0;n<N;n++)
                                     {
                                         for(long iy=wy;iy+wy<ny;iy++)
@@ -617,10 +618,11 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                         {
                                             // W * y
                                             sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                 * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                                                 * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
+                                                 * factor;
                                         }
                                     }
-                                    g->activation_values[layer+1][i] = sigmoid(sum,2); // arctan
+                                    g->activation_values[layer+1][i] = sigmoid(sum,0); // arctan
                                 }
                             }
                             break;
@@ -700,10 +702,35 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
             T partial_error = 0;
             long max_i = 0;
             T max_val = 0;
+            T max_act_val = 0;
+            T min_act_val = 1;
+            T max_label = 0;
+            T min_label = 1;
             for(long i=0;i<g->n_nodes[last_layer];i++)
             {
                 g->deltas[last_layer+1][i] = labels[vrtx[n]*g->n_labels+i] - g->activation_values[last_layer][i];
+                if(fabs(g->activation_values[last_layer][i]) > max_act_val)
+                {
+                    max_act_val = fabs(g->activation_values[last_layer][i]);
+                }
+                if(fabs(g->activation_values[last_layer][i]) < min_act_val)
+                {
+                    min_act_val = fabs(g->activation_values[last_layer][i]);
+                }
+                if(fabs(labels[vrtx[n]*g->n_labels+i]) > max_label)
+                {
+                    max_label = fabs(labels[vrtx[n]*g->n_labels+i]);
+                }
+                if(fabs(labels[vrtx[n]*g->n_labels+i]) < min_label)
+                {
+                    min_label = fabs(labels[vrtx[n]*g->n_labels+i]);
+                }
             }
+            std::cout << "vrtx[" << n << "]=" << vrtx[n] << std::endl;
+            std::cout << "max activation value:" << max_act_val << std::endl;
+            std::cout << "min activation value:" << min_act_val << std::endl;
+            std::cout << "max label:" << max_label << std::endl;
+            std::cout << "min label:" << min_label << std::endl;
             for(long i=0;i<g->n_nodes[last_layer];i++)
             {
                 partial_error += fabs(g->deltas[last_layer+1][i]);
@@ -737,17 +764,20 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                     {
                         case RELU_LAYER :
                             {
+                                T max_deltas = 0;
                                 for(long i=0;i<g->n_nodes[layer+1];i++)
                                 {
-                                    if(g->activation_values[layer+1] < 0)
-                                    {
-                                        g->deltas[layer+1][i] = 0;
-                                    }
-                                    else
+                                    //if(g->activation_values[layer+1][i] < 0.0)
+                                    //{
+                                    //    g->deltas[layer+1][i] = 0;
+                                    //}
+                                    //else
                                     {
                                         g->deltas[layer+1][i] = g->deltas[layer+2][i];
                                     }
+                                    if(fabs(g->deltas[layer+1][i])>max_deltas)max_deltas = fabs(g->deltas[layer+1][i]);
                                 }
+                                std::cout << layer << " relu max deltas:" << max_deltas << std::endl;
                                 break;
                             }
                         case FULLY_CONNECTED_LAYER :
@@ -784,7 +814,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 long wy = (ky/2);
                                 long dx = nx - wx*2;
                                 long dy = ny - wy*2;
-
+                                T max_deltas = 0;
+                                T max_prev_deltas = 0;
                                 for(long m=0,i=0;m<M;m++)
                                 {
                                     for(long iy=0;iy<ny;iy++)
@@ -806,16 +837,17 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                     // W
                                                     * g->weights_neuron[layer+1][ky*n+ty][kx*m+tx] 
                                                     ;
+                                                if(fabs(g->deltas[layer+2][(dx*dy)*n + dx*vy + vx])>max_prev_deltas)max_prev_deltas = fabs(g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]);
                                             }
                                         }
-                                        g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],2);
+                                        if(fabs(g->deltas[layer+1][i])>max_deltas)max_deltas = fabs(g->deltas[layer+1][i]);
+                                        g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],0);
                                     }
                                 }
-
+                                std::cout << layer << " conv max deltas:" << max_deltas << " " << max_prev_deltas << std::endl;
                                 break;
                             }
                         case MAX_POOLING_LAYER :
-                        case MEAN_POOLING_LAYER :
                             {
                                 // j : n_nodes[layer  ] = curr size = M * nx * ny
                                 // i : n_nodes[layer+1] = next size = N * dx * dy
@@ -836,13 +868,43 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                         for(long ty=0;ty<factory;ty++)
                                         for(long tx=0;tx<factorx;tx++)
                                         {
-                                            if(g->activation_values[layer+1][m*nx*ny+nx*y+x] == g->activation_values[layer+2][m*dx*dy+dx*oy+ox])
+                                            if(fabs(g->activation_values[layer+1][m*nx*ny+nx*y+x] - g->activation_values[layer+2][m*dx*dy+dx*oy+ox]) < 1e-8)
                                             {
                                                 g->deltas[layer+1][m*nx*ny+nx*y+x] = g->deltas[layer+2][m*dx*dy+dx*oy+ox];
                                             }
                                             else
                                             {
                                                 g->deltas[layer+1][m*nx*ny+nx*y+x] = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        case MEAN_POOLING_LAYER :
+                            {
+                                std::cout << "mean pooling backward propagation" << std::endl;
+                                // j : n_nodes[layer  ] = curr size = M * nx * ny
+                                // i : n_nodes[layer+1] = next size = N * dx * dy
+                                long M = g->n_features[layer+1];
+                                long nx = g->nx[layer+1];
+                                long ny = g->ny[layer+1];
+                                long factorx = g->pooling_factorx[layer+1];
+                                long factory = g->pooling_factory[layer+1];
+                                long dx = nx / factorx;
+                                long dy = ny / factory;
+                                T tmp_val,max_val;
+
+                                for(long m=0,i=0;m<M;m++)
+                                {
+                                    for(long y=0,oy=0;y<ny;y+=factory,oy++)
+                                    for(long x=0,ox=0;x<nx;x+=factorx,ox++)
+                                    {
+                                        for(long ty=0;ty<factory;ty++)
+                                        for(long tx=0;tx<factorx;tx++)
+                                        {
+                                            {
+                                                g->deltas[layer+1][m*nx*ny+nx*y+x] = g->deltas[layer+2][m*dx*dy+dx*oy+ox];
                                             }
                                         }
                                     }
@@ -949,13 +1011,15 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                         {
                                             for(long tx=0;tx<kx;tx++)
                                             {
-                                                g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
+                                                g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
                                             }
                                         }
                                     }
-
                                 }
                             }
+                            T max_disp = 0;
+                            T tmp_disp;
+                            T fact = 1.0/(kx*ky);
                             for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
                             {
                                 for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
@@ -970,22 +1034,46 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                 for(long vy=0;vy<dy;vy++)
                                                 for(long vx=0;vx<dx;vx++,i++)
                                                 {
-                                                        g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
-                                                            (
+                                                        g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
                                                                 (
                                                                     // dEdy
                                                                     g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
                                                                     // y
                                                                   * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
-                                                                )
-                                                            - g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                            ) * avg_factor;
+                                                                ) * fact
+                                                                ;
+
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
+                            {
+                                for(long n=0;n<N;n++)
+                                {
+                                    for(long ty=0;ty<ky;ty++)
+                                    {
+                                        for(long m=0;m<M;m++)
+                                        {
+                                            for(long tx=0;tx<kx;tx++)
+                                            {
+                                                g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] +=
+                                                  (
+                                                      g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                                  -   g->   partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                                  ) * avg_factor
+                                                  ;
+                                                if(fabs(g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx])>max_disp)
+                                                {
+                                                  max_disp = fabs(g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            std::cout << "max disp:" << max_disp << std::endl;
                             break;
                         }
                     case RELU_LAYER :
@@ -1805,6 +1893,7 @@ struct ConvolutionalNeuralNetwork
         bool init = true;
         perror = 1e10;
         T min_final_error = 1e10;
+        long live_count = 0;
 
         long n_threads = boost::thread::hardware_concurrency();
         std::vector<std::vector<long> > vrtx(n_threads);
@@ -1813,6 +1902,7 @@ struct ConvolutionalNeuralNetwork
           if(labels[i] > 1e-10)
           {
             vrtx[i%vrtx.size()].push_back(i);
+            live_count++;
           }
         }
         std::vector<cnn_training_info<T>*> g;
@@ -1905,7 +1995,7 @@ struct ConvolutionalNeuralNetwork
               index += g[thread]->smallest_index;
             }
             threads.clear();
-            std::cout << iter << "\tquasi newton=" << ((quasi_newton!=NULL)?(quasi_newton->quasi_newton_update?"true":"false"):"NULL") << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/n_elements << "\ttest\%error=" << 100*final_error << "\tindex=" << index/n_elements << std::endl;
+            std::cout << iter << "\tquasi newton=" << ((quasi_newton!=NULL)?(quasi_newton->quasi_newton_update?"true":"false"):"NULL") << "\ttype=" << sigmoid_type << "\tepsilon=" << epsilon << "\talpha=" << alpha << '\t' << "error=" << error << "\tdiff=" << (error-perror) << "\t\%error=" << 100*error/live_count << "\ttest\%error=" << 100*final_error << "\tindex=" << index/n_elements << std::endl;
             perror = error;
             errs.push_back(error/n_elements);
             test_errs.push_back(final_error);
