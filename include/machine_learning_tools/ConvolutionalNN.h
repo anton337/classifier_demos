@@ -86,6 +86,11 @@ struct cnn_training_info
         {
             switch(n_layer_type[layer])
             {
+                case RELU_LAYER :
+                    {
+                        activation_values [layer] = new T[n_nodes[layer]];
+                        break;
+                    }
                 case FULLY_CONNECTED_LAYER :
                     {
                         activation_values [layer] = new T[n_nodes[layer]];
@@ -140,6 +145,11 @@ struct cnn_training_info
         {
             switch(n_layer_type[layer])
             {
+                case RELU_LAYER :
+                    {
+                        deltas[layer] = new T[n_nodes[layer]];
+                        break;
+                    }
                 case FULLY_CONNECTED_LAYER :
                     {
                         deltas[layer] = new T[n_nodes[layer]];
@@ -236,6 +246,7 @@ struct cnn_training_info
                         mu_weights_bias[layer] = NULL;
                         break;
                     }
+                case RELU_LAYER :
                 case MAX_POOLING_LAYER :
                 case MEAN_POOLING_LAYER :
                     {
@@ -298,6 +309,7 @@ struct cnn_training_info
                         }
                         break;
                     }
+                case RELU_LAYER :
                 case MAX_POOLING_LAYER :
                 case MEAN_POOLING_LAYER :
                     {
@@ -447,181 +459,6 @@ struct cnn_training_info
 
 };
 
-/*
-template<typename T>
-void ForwardReLU()
-{
-    for(long i=0;i<size;i++)
-    {
-        y[l][i] = max(0,y[l-1][i]);
-    }
-}
-
-template<typename T>
-void ReverseReLU()
-{
-    for(long i=0;i<size;i++)
-    {
-        if(y[l][i] < 0)
-        {
-            y[l][i] = max(0,y[l-1][i]);
-        }
-        else
-        {
-            dEdy[l-1][i] = dEdy[l][i];
-        }
-    }
-}
-
-template<typename T>
-void ForwardFullyConnected()
-{
-    for(long i=0;i<size_1;i++)
-    {
-        y[l][i] = 0;
-        for(long j=0;j<size_2;j++)
-        {
-            y[l][i] += W[l][i][j] * y[l-1][j];
-        }
-    }
-}
-
-template<typename T>
-void ReverseFullyConnectedDeltas()
-{
-    for(long j=0;j<size_2;j++)
-    {
-        dEdy[l-1][j] = 0;
-        for(long i=0;i<size_1;i++)
-        {
-            dEdy[l-1][j] += W[l][j][i] * dEdy[l][i];
-        }
-    }
-}
-
-template<typename T>
-void ReverseFullyConnectedUpdate()
-{
-    for(long i=0;i<size_1;i++)
-    {
-        dEdW[l-1][i] = 0;
-        for(long j=0;j<size_2;j++)
-        {
-            dEdW[l-1][i] += dEdy[l][i] * y[l][j];
-        }
-    }
-}
-
-template<typename T>
-void ForwardPooling()
-{
-    for(long n=0;n<N;n++)
-    for(long X=0;X<nx;X+=k)
-    for(long Y=0;Y<ny;Y+=k)
-    {
-        y[l][nx*ny*n+X+nx*Y] = -100000000;
-    }
-    long NX = nx/k;
-    long NY = ny/k;
-    for(long n=0;n<N;n++)
-    for(long x=0,X=0;x<nx;x+=k,X++)
-    for(long dx=0;dx<k;dx++)
-    for(long y=0,Y=0;y<ny;y+=k,Y++)
-    for(long dy=0;dy<k;dy++)
-    {
-        y[l][NX*NY*n+X+nx*Y] = max(y[l][NX*NY*n+X+nx*Y],y[l-1][nx*ny*n+x+dx+nx*(y+dy)]);
-    }
-}
-
-template<typename T>
-void ReversePooling()
-{
-    long NX = nx/k;
-    long NY = ny/k;
-    for(long n=0;n<N;n++)
-    for(long x=0,X=0;x<nx;x+=k,X++)
-    for(long dx=0;dx<k;dx++)
-    for(long y=0,Y=0;y<ny;y+=k,Y++)
-    for(long dy=0;dy<k;dy++)
-    {
-        if(y[l][NX*NY*n+X+nx*Y] == y[l-1][nx*ny*n+x+dx+nx*(y+dy)])
-        {
-            dEdy[l-1][nx*ny*n+x+dx+nx*(y+dy)] = dEdy[l][NX*NY*n+X+nx*Y];
-        }
-        else
-        {
-            dEdy[l-1][nx*ny*n+x+dx+nx*(y+dy)] = 0;
-        }
-    }
-}
-
-template<typename T>
-void ForwardConvolutional()
-{
-    long KX = 2*k+1;
-    long KY = 2*k+1;
-    long NX = nx-KX;
-    long NY = ny-KY;
-    for(long n=0;n<N;n++)
-    for(long m=0;m<M;m++)
-    {
-        for(long y=k,i=0;y+k<ny;y++)
-        for(long x=k;x+k<nx;x++,i++)
-        {
-            y[l][NX*NY*n+i] = 0;
-            for(long dy=-k,j=0,ky=0;dy<=k;y++,ky++)
-            for(long dy=-k,kx=0;dx<=k;x++,j++,kx++)
-            {
-                y[l][NX*NY*n+i] += W[l][KX*n+kx][KY*m+ky] * y[l-1][nx*ny*m+x+dx+nx*(y+dy)];
-            }
-        }
-    }
-}
-
-template<typename T>
-void ReverseConvolutionalDeltas()
-{
-    long NX = nx-2*k-1;
-    long NY = ny-2*k-1;
-    for(long n=0;n<N;n++)
-    for(long m=0;m<M;m++)
-    {
-        for(long i=0;i<nx*ny;i++)
-        {
-            dEdy[l-1][nx*ny*m+i] = 0;
-        }
-        for(long dy=-k,j=0,ky=0;dy<=k;y++,ky++)
-        for(long dx=-k,kx=0;dx<=k;x++,j++,kx++)
-        {
-            for(long y=k,i=0;y+k<ny;y++)
-            for(long x=k;x+k<nx;x++,i++)
-            {
-                dEdy[l-1][nx*ny*m+x+dx+nx*(y+dy)] += W[l][KX*n+kx][KY*m+ky] * dEdy[l][NX*NY*n+i];
-            }
-        }
-    }
-}
-
-template<typename T>
-void ReverseConvolutionalUpdate()
-{
-    long NX = nx-2*k-1;
-    long NY = ny-2*k-1;
-    for(long n=0;n<N;n++)
-    for(long m=0;m<M;m++)
-    {
-        for(long i=0;i<size_1;i++)
-        {
-            dEdW[l][m][n][i] = 0;
-            for(long j=0;j<size_2;j++)
-            {
-                dEdW[l-1][KX*n+kx][KY*m+ky] += dEdy[l][NX*NY*n+i] * y[l][nx*ny*m+dx+nx*(y+dy)];
-            }
-        }
-    }
-}
-*/
-
 template<typename T>
 void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::vector<long> const & vrtx,T * variables,T * labels)
 {
@@ -640,6 +477,14 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
             {
                 switch ( g->n_layer_type[layer] )
                 {
+                    case RELU_LAYER :
+                        {
+                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            {
+                                g->activation_values[layer+1][i] = max(0.0,g->activation_values[layer][i]);
+                            }
+                            break;
+                        }
                     case FULLY_CONNECTED_LAYER :
                         {
                             for(long i=0;i<g->n_nodes[layer+1];i++)
@@ -762,7 +607,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 for(long oy=0;oy<dy;oy++)
                                 for(long ox=0;ox<dx;ox++,i++)
                                 {
-                                    T sum = 0.5;//g->weights_bias[layer][i];
+                                    T sum = 0.0;//g->weights_bias[layer][i];
                                     for(long n=0;n<N;n++)
                                     {
                                         for(long iy=wy;iy+wy<ny;iy++)
@@ -775,7 +620,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                  * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
                                         }
                                     }
-                                    g->activation_values[layer+1][i] = sigmoid(sum,g->type);
+                                    g->activation_values[layer+1][i] = sigmoid(sum,2); // arctan
                                 }
                             }
                             break;
@@ -890,6 +735,21 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 {
                     switch ( g->n_layer_type[layer+1] )
                     {
+                        case RELU_LAYER :
+                            {
+                                for(long i=0;i<g->n_nodes[layer+1];i++)
+                                {
+                                    if(g->activation_values[layer+1] < 0)
+                                    {
+                                        g->deltas[layer+1][i] = 0;
+                                    }
+                                    else
+                                    {
+                                        g->deltas[layer+1][i] = g->deltas[layer+2][i];
+                                    }
+                                }
+                                break;
+                            }
                         case FULLY_CONNECTED_LAYER :
                             {
                                 for(long i=0;i<g->n_nodes[layer+1];i++)
@@ -948,7 +808,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                     ;
                                             }
                                         }
-                                        g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],g->type);
+                                        g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],2);
                                     }
                                 }
 
@@ -1031,6 +891,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             //}
                             break;
                         }
+                    case RELU_LAYER :
                     case MAX_POOLING_LAYER :
                     case MEAN_POOLING_LAYER :
                         {
@@ -1127,6 +988,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             }
                             break;
                         }
+                    case RELU_LAYER :
                     case MAX_POOLING_LAYER :
                     case MEAN_POOLING_LAYER :
                         {
@@ -1583,6 +1445,38 @@ struct ConvolutionalNeuralNetwork
         {
             switch(n_layer_type[layer])
             {
+                case RELU_LAYER :
+                    {
+                        if(n_nodes[layer+1] != n_nodes[layer])
+                        {
+                            std::cout << "layer " << layer+1 << " relu layer should have same number of neurons as output " << std::endl;
+                            std::cout << "n_nodes " << layer+1 << " should be " << n_nodes[layer] << std::endl;
+                            exit(1);
+                        }
+                        if(n_features[layer+1] != n_features[layer])
+                        {
+                            std::cout << "layer " << layer+1 << " relu layer should have same number of features as output " << std::endl;
+                            std::cout << "n_features " << layer+1 << " should be " << n_features[layer] << std::endl;
+                            exit(1);
+                        }
+                        if(nx[layer+1] != nx[layer])
+                        {
+                            std::cout << "layer " << layer+1 << " relu layer should have same nx as output " << std::endl;
+                            std::cout << "nx " << layer+1 << " should be " << nx[layer] << std::endl;
+                            exit(1);
+                        }
+                        if(ny[layer+1] != ny[layer])
+                        {
+                            std::cout << "layer " << layer+1 << " relu layer should have same ny as output " << std::endl;
+                            std::cout << "ny " << layer+1 << " should be " << ny[layer] << std::endl;
+                            exit(1);
+                        }
+                        activation_values [layer] = new T[n_nodes[layer]];
+                        activation_values1[layer] = new T[n_nodes[layer]];
+                        activation_values2[layer] = new T[n_nodes[layer]];
+                        activation_values3[layer] = new T[n_nodes[layer]];
+                        break;
+                    }
                 case FULLY_CONNECTED_LAYER :
                     {
                         activation_values [layer] = new T[n_nodes[layer]];
@@ -1636,10 +1530,10 @@ struct ConvolutionalNeuralNetwork
                             std::cout << "pooling layer nx: " << layer+1 << " should be: " << dx << std::endl;
                             exit(1);
                         }
-                        long dy = ny[layer] / pooling_factorx[layer+1];
+                        long dy = ny[layer] / pooling_factory[layer+1];
                         if(ny[layer] != pooling_factory[layer+1]*ny[layer+1])
                         {
-                            std::cout << "pooling layer nx: " << layer+1 << " should be: " << dy << std::endl;
+                            std::cout << "pooling layer ny: " << layer+1 << " should be: " << dy << std::endl;
                             exit(1);
                         }
                         if(n_nodes[layer] % (pooling_factorx[layer+1]*pooling_factory[layer+1]) != 0)
@@ -1668,6 +1562,11 @@ struct ConvolutionalNeuralNetwork
         {
             switch(n_layer_type[layer])
             {
+                case RELU_LAYER :
+                    {
+                        deltas[layer] = new T[n_nodes[layer]];
+                        break;
+                    }
                 case FULLY_CONNECTED_LAYER :
                     {
                         deltas[layer] = new T[n_nodes[layer]];
@@ -1731,6 +1630,7 @@ struct ConvolutionalNeuralNetwork
                         weights_bias[layer] = NULL;
                         break;
                     }
+                case RELU_LAYER :
                 case MAX_POOLING_LAYER :
                 case MEAN_POOLING_LAYER :
                     {
