@@ -86,7 +86,7 @@ int main(int argc,char ** argv)
       long nx = 28;
       long ny = 28;
       binaryReader<double> reader;
-      double * dat = reader.readBinary(16,nx,ny,argv[1],32*1);
+      double * dat = reader.readBinary(16,nx,ny,argv[1],32*10);
       viz_in_dat = new VisualizeDataArray < double > ( reader.get_size()
                                                      , nx*ny
                                                      , nx*ny
@@ -98,15 +98,21 @@ int main(int argc,char ** argv)
       addDisplay ( viz_in_dat );
       
       std::vector<long> nodes;
-      /* 0 */ nodes.push_back(nx*ny); // 28 : 28*28 = 784 | inputs
-      /* 1 */ nodes.push_back(13824);  // 24 : 24*24 = 576 | conv layer
-      /* 5 */ nodes.push_back(13824);    // relu
-      /* 6 */ nodes.push_back(96);    // hidden layer
-      /* 7 */ nodes.push_back(16);     // hidden layer
-      /*   */ nodes.push_back(1);     // output layer
-      /*   */ nodes.push_back(1);     // outputs
+      /* 0 */ nodes.push_back(nx*ny);
+      /* 1 */ nodes.push_back(4608);
+      /* 2 */ nodes.push_back(1152); 
+      /* 3 */ nodes.push_back(1536);
+      /* 4 */ nodes.push_back(384);
+      /* 5 */ nodes.push_back(384);
+      /* 7 */ nodes.push_back(96);   
+      /* 8 */ nodes.push_back(16);   
+      /*   */ nodes.push_back(1);    
+      /*   */ nodes.push_back(1);    
       std::vector<LayerType> layer_type;
       layer_type.push_back(CONVOLUTIONAL_LAYER);
+      layer_type.push_back(MAX_POOLING_LAYER);
+      layer_type.push_back(CONVOLUTIONAL_LAYER);
+      layer_type.push_back(MAX_POOLING_LAYER);
       layer_type.push_back(RELU_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
       layer_type.push_back(FULLY_CONNECTED_LAYER);
@@ -133,6 +139,8 @@ int main(int argc,char ** argv)
       activation_type.push_back(LOGISTIC);
       std::vector<long> features;
       features.push_back(1);
+      features.push_back(8);
+      features.push_back(8);
       features.push_back(24);
       features.push_back(24);
       features.push_back(24);
@@ -175,11 +183,11 @@ int main(int argc,char ** argv)
       std::vector<long> layer_nx;
       layer_nx.push_back(28);
       layer_nx.push_back(24);
-      layer_nx.push_back(24);
       layer_nx.push_back(12);
+      layer_nx.push_back(8);
       layer_nx.push_back(4);
       layer_nx.push_back(4);
-      layer_nx.push_back(2);
+      layer_nx.push_back(3);
       layer_nx.push_back(nx-14);
       layer_nx.push_back(nx-16);
       layer_nx.push_back(nx-18);
@@ -190,11 +198,11 @@ int main(int argc,char ** argv)
       std::vector<long> layer_ny;
       layer_ny.push_back(28);
       layer_ny.push_back(24);
-      layer_ny.push_back(24);
       layer_ny.push_back(12);
+      layer_ny.push_back(8);
       layer_ny.push_back(4);
       layer_ny.push_back(4);
-      layer_ny.push_back(2);
+      layer_ny.push_back(3);
       layer_ny.push_back(ny-14);
       layer_ny.push_back(ny-16);
       layer_ny.push_back(ny-18);
@@ -234,7 +242,7 @@ int main(int argc,char ** argv)
       layer_pooling_factory.push_back(2);
       layer_pooling_factory.push_back(2);
       layer_pooling_factory.push_back(2);
-      //for(int i=0;i<26;i++)
+      for(int i=0;i<26;i++)
       {
         models.push_back 
             ( 
