@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <GL/glut.h>
 #include "visualize_data_array.h"
+#include "visualize_data_array_color.h"
 #include "visualize_model_output.h"
 #include "visualize_rbm_reconstruction.h"
 #include "visualize_activation_probe.h"

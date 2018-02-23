@@ -538,7 +538,7 @@ struct cnn_training_info
                                 {
                                     for(long j=0;j<kx[layer]*M;j++,k++)
                                     {
-                                        weights_neuron[layer][i][j] += 10*epsilon * partial_weights_neuron[layer][i][j];
+                                        weights_neuron[layer][i][j] += 100*epsilon * partial_weights_neuron[layer][i][j];
                                     }
                                 }
                             }
@@ -727,7 +727,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                      * factor;
                                             }
                                         }
-                                        g->activation_values[layer+1][i] = sigmoid(sum,2); // arctan
+                                        g->activation_values[layer+1][i] = sigmoid(sum,0); // arctan
                                         //std::cout << g->activation_values[layer+1][i] << "  ";
                                         //std::cout << sum << "  ";
                                         //if(i%dx==0)std::cout << std::endl;
@@ -880,7 +880,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 {
                                     if(g->activation_values[layer+1][i] < 0.0)
                                     {
-                                        g->deltas[layer+1][i] = 0;
+                                        //g->deltas[layer+1][i] = 0;
+                                        g->deltas[layer+1][i] = g->deltas[layer+2][i];
                                     }
                                     else
                                     {
@@ -953,7 +954,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                 }
                                             }
                                             if(fabs(g->deltas[layer+1][i])>max_deltas)max_deltas = fabs(g->deltas[layer+1][i]);
-                                            g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],2);
+                                            g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],0);
                                         }
                                     }
                                 }

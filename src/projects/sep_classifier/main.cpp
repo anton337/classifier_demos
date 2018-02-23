@@ -17,7 +17,7 @@ double * out= new double[nsamp];
 
 void train()
 {
-        model -> train(0,.2,10000,nsamp,wx*wy,1,in,out);
+        model -> train(0,.02,10000,nsamp,wx*wy,1,in,out);
 }
 
 template<typename T>
