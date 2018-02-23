@@ -1,7 +1,21 @@
 #include "ConvolutionalNN.h"
 #include "sep_reader.h"
+#include "visualization.h"
 
 ConvolutionalNeuralNetwork <double> * model = NULL;
+
+VisualizeDataArray < double > * viz_in_dat = NULL;
+
+long wx = 32;
+long wy = 32;
+long nsamp = 100;
+double * in = new double[nsamp*wx*wy];
+double * out= new double[nsamp];
+
+void train()
+{
+        model -> train(0,.2,10000,nsamp,wx*wy,1,in,out);
+}
 
 template<typename T>
 T * sample_sep(T * dat,long z,long wx,long wy,long ox,long oy,long nx,long ny,long nz)
@@ -13,22 +27,31 @@ T * sample_sep(T * dat,long z,long wx,long wy,long ox,long oy,long nx,long ny,lo
         std::cout << "please make sure to sample within the volume." << std::endl;
         exit(1);
     }
+    T min_val = 10000000000;
+    T max_val =-10000000000;
     for(long x=ox,k=0;x<ox+wx;x++)
     {
         for(long y=oy;y<oy+wy;y++,k++)
         {
             ret[k] = dat[x*ny*nz+y*nz+z];
+            if(ret[k]>max_val)max_val=ret[k];
+            if(ret[k]<min_val)min_val=ret[k];
         }
+    }
+    for(long i=0;i<wx*wy;i++)
+    {
+      ret[i] = (ret[i]-min_val+0.0001)/(max_val-min_val+0.0001);
     }
     T num = 0;
     T den = 0;
     T tmp;
-    long c = wx*wy/2;
-    long w = 3;
+    long c = wx*(wy/2) + (wx/2);
+    long w = 2;
     for(long x=-w;x<=w;x++)
     for(long y=-w;y<=w;y++)
     {
-        tmp = ret[c+y+wx*x];
+        tmp = ret[c+y+wy*x];
+        tmp = ret[c+y];
         num += tmp;
         den += tmp*tmp;
     }
@@ -36,11 +59,8 @@ T * sample_sep(T * dat,long z,long wx,long wy,long ox,long oy,long nx,long ny,lo
     den *= 2*w+1;
     den *= 2*w+1;
     T semb = num/den;
-    semb *= semb;
-    semb *= semb;
-    semb *= semb;
-    semb = 1 - semb;
     ret[wx*wy] = semb;
+    //ret[c] = 0;
     return ret;
 }
 
@@ -69,19 +89,18 @@ int main(int argc,char ** argv)
                            , reader.n2
                            , reader.n3
                            );
-        long wx = 32;
-        long wy = 32;
-        long nsamp = 100;
-        double * in = new double[nsamp*wx*wy];
-        double * out= new double[nsamp];
+        long it = 0;
         long k = 0;
         long pos = 0;
         long neg = 0;
-        double thresh = 0.98;
+        double thresh = 0.4;
+        double thresh2 = 0.99;
         while(true)
         {
-            float * tmp = sample_sep(dat,rand()%nz,wx,wy,rand()%(nx-wx),rand()%(ny-wy),nx,ny,nz);
-            if(tmp[wx*wy] < thresh || tmp[wx*wy] > thresh)
+            //float * tmp = sample_sep(dat,rand()%nz,wx,wy,rand()%(nx-wx),rand()%(ny-wy),nx,ny,nz);
+            float * tmp = sample_sep(dat,it%nz,wx,wy,(it/nz)%(nx-wx),(it/(nz*(nx-wx)))%(ny-wy),nx,ny,nz);
+            //std::cout << i << "\t" << tmp[wx*wy] << std::endl;
+            if((tmp[wx*wy] < thresh && k%2==0) || (tmp[wx*wy] > thresh2 && k%2==1))
             {
                 for(long i=0;i<wx*wy;i++)
                 {
@@ -91,19 +110,33 @@ int main(int argc,char ** argv)
                 {
                     neg++;
                     out[k] = 1e-5;
+                    it = rand();
                 }
-                if(tmp[wx*wy] > thresh)
+                if(tmp[wx*wy] > thresh2)
                 {
                     pos++;
                     out[k] = 1;
                 }
                 k++;
+                std::cout << "k:" << k << std::endl;
             }
+            it++;
             delete [] tmp;
             if(k>=nsamp)break;
         }
+        delete [] dat;
         std::cout << "pos:" << pos << std::endl;
         std::cout << "neg:" << neg << std::endl;
+
+        viz_in_dat = new VisualizeDataArray < double > ( nsamp*wx*wy
+                                                       , wx*wy
+                                                       , wx*wy
+                                                       , wx
+                                                       , wy
+                                                       , in
+                                                       , -1 , 0 , -1 , 1
+                                                       );
+        addDisplay ( viz_in_dat );
 
         std::vector<long> nodes;
         /* 0 */ nodes.push_back(wx*wy);
@@ -262,7 +295,6 @@ int main(int argc,char ** argv)
                     , layer_pooling_factorx
                     , layer_pooling_factory
                     ); 
-        model -> train(0,.01,10000,nsamp,wx*wy,1,in,out);
     }
     else
     {
@@ -270,6 +302,10 @@ int main(int argc,char ** argv)
         exit(1);
     }
 
+    new boost::thread(train);
+
+    startGraphics(argc,argv,"SEP Classifier Convolutional Neural Network");
+    std::cout << "Finished." << std::endl;
 
     return 0;
 }

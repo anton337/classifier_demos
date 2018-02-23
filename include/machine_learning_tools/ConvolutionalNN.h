@@ -538,7 +538,7 @@ struct cnn_training_info
                                 {
                                     for(long j=0;j<kx[layer]*M;j++,k++)
                                     {
-                                        weights_neuron[layer][i][j] += epsilon * partial_weights_neuron[layer][i][j];
+                                        weights_neuron[layer][i][j] += 10*epsilon * partial_weights_neuron[layer][i][j];
                                     }
                                 }
                             }
