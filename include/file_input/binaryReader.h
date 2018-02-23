@@ -49,6 +49,22 @@ struct binaryReader
       delete [] ret;
       return ret_transpose;
     }
+    T * readBinary(long offset,long n,std::string filename,std::size_t max_num = -1)
+    {
+      std::vector<char> out;
+      readBinary(filename,out);
+      size = out.size()-offset;
+      if(max_num<size)
+      {
+        size = max_num * n;
+      }
+      T * ret = new T[size];
+      for(long i=offset;i<size;i++)
+      {
+        ret[i-offset] = (T)(unsigned char)(out[i])/256.0;
+      }
+      return ret;
+    }
     char * readBinaryChars(long offset,std::string filename)
     {
       std::vector<char> out;

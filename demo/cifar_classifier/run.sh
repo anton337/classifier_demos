@@ -1,0 +1,11 @@
+
+DIR=`basename ${PWD}`
+
+DATA_IMAGE=$PROJECT_HOME/data/$DIR/data_batch_1.bin
+
+SNAPSHOTS=$PROJECT_HOME/snapshots/$DIR/
+
+EXECUTABLE=$PROJECT_HOME/bin/$DIR/demo.bin
+
+$EXECUTABLE $DATA_IMAGE $SNAPSHOTS
+

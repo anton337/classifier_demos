@@ -6,7 +6,8 @@
 #export PROJECT=auto_encoder_image_segmentation
 #export PROJECT=mnist_classifier
 #export PROJECT=convolutional_neural_network
-export PROJECT=sep_classifier
+#export PROJECT=sep_classifier
+export PROJECT=cifar_classifier
 
 ./clean.sh
 
