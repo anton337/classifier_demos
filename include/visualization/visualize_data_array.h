@@ -135,7 +135,7 @@ struct VisualizeDataArray : public Display < T >
         if(dat == NULL)
         {
             std::cout << "Data array not initialized" << std::endl;
-            exit(1);
+            return;
         }
     
         if(num_elems % num_vars != 0)

@@ -6,10 +6,13 @@ ConvolutionalNeuralNetwork <double> * model = NULL;
 
 VisualizeDataArray < double > * viz_in_dat = NULL;
 
+VisualizeDataArray < double > * viz_in_afi = NULL;
+
 long wx = 32;
 long wy = 32;
 long nsamp = 100;
 double * in = new double[nsamp*wx*wy];
+double * in_afi = new double[nsamp*wx*wy];
 double * out= new double[nsamp];
 
 void train()
@@ -18,10 +21,11 @@ void train()
 }
 
 template<typename T>
-T * sample_sep(T * dat,long z,long wx,long wy,long ox,long oy,long nx,long ny,long nz)
+T * sample_sep(T * dat,T * dat_afi,long z,long wx,long wy,long ox,long oy,long nx,long ny,long nz)
 {
     // assumption, data is arranged by: dat[x*ny*nz+y*nz+z]
     T * ret = new T[wx*wy + 1]; // last sample contains classification
+    T * afi = new T[wx*wy + 1]; // last sample contains classification
     if(ox<0||oy<0||ox+wx>=nx||oy+wy>=ny||z<0||z>=nz)
     {
         std::cout << "please make sure to sample within the volume." << std::endl;
@@ -29,18 +33,24 @@ T * sample_sep(T * dat,long z,long wx,long wy,long ox,long oy,long nx,long ny,lo
     }
     T min_val = 10000000000;
     T max_val =-10000000000;
+    T min_afi = 10000000000;
+    T max_afi =-10000000000;
     for(long x=ox,k=0;x<ox+wx;x++)
     {
         for(long y=oy;y<oy+wy;y++,k++)
         {
-            ret[k] = dat[x*ny*nz+y*nz+z];
+            ret[k] = dat    [x*ny*nz+y*nz+z];
+            afi[k] = dat_afi[x*ny*nz+y*nz+z];
             if(ret[k]>max_val)max_val=ret[k];
             if(ret[k]<min_val)min_val=ret[k];
+            if(afi[k]>max_afi)max_afi=afi[k];
+            if(afi[k]<min_afi)min_afi=afi[k];
         }
     }
     for(long i=0;i<wx*wy;i++)
     {
       ret[i] = (ret[i]-min_val+0.0001)/(max_val-min_val+0.0001);
+      afi[i] = (afi[i]-min_afi+0.0001)/(max_afi-min_afi+0.0001);
     }
     T num = 0;
     T den = 0;
@@ -58,9 +68,13 @@ T * sample_sep(T * dat,long z,long wx,long wy,long ox,long oy,long nx,long ny,lo
     num *= num;
     den *= 2*w+1;
     den *= 2*w+1;
-    T semb = num/den;
-    ret[wx*wy] = semb;
-    //ret[c] = 0;
+    //T semb = num/den;
+    {
+      ret[wx*wy] = afi[c];
+    }
+    //ret[wx*wy] = semb;
+    ret[c] = 0;
+    delete [] afi;
     return ret;
 }
 
@@ -71,7 +85,7 @@ int main(int argc,char ** argv)
     srand(time(0));
 
     // load input
-    if(argc>0)
+    if(argc>1)
     {
         SEPReader reader(argv[1]);
         int ox = reader.o3;
@@ -89,22 +103,37 @@ int main(int argc,char ** argv)
                            , reader.n2
                            , reader.n3
                            );
+        SEPReader reader_afi(argv[2]);
+        float * dat_afi = new float[nx*ny*nz];
+        reader_afi.read_sepval ( &dat_afi[0]
+                           , reader.o1
+                           , reader.o2
+                           , reader.o3
+                           , reader.n1
+                           , reader.n2
+                           , reader.n3
+                           );
         long it = 0;
         long k = 0;
         long pos = 0;
         long neg = 0;
-        double thresh = 0.4;
-        double thresh2 = 0.99;
+        double thresh = 0.05;
+        double thresh2 = 0.95;
         while(true)
         {
             //float * tmp = sample_sep(dat,rand()%nz,wx,wy,rand()%(nx-wx),rand()%(ny-wy),nx,ny,nz);
-            float * tmp = sample_sep(dat,it%nz,wx,wy,(it/nz)%(nx-wx),(it/(nz*(nx-wx)))%(ny-wy),nx,ny,nz);
+            long z = 10+it%(nz-20);
+            long x = 10+(it/nz)%(nx-wx-20);
+            long y = 10+(it/(nz*nx))%(ny-wy-20);
+            float * tmp     = sample_sep<float>(dat_afi,dat_afi,z,wx,wy,x,y,nx,ny,nz);
+            float * tmp_afi = sample_sep<float>(dat    ,dat    ,z,wx,wy,x,y,nx,ny,nz);
             //std::cout << i << "\t" << tmp[wx*wy] << std::endl;
             if((tmp[wx*wy] < thresh && k%2==0) || (tmp[wx*wy] > thresh2 && k%2==1))
             {
                 for(long i=0;i<wx*wy;i++)
                 {
                     in[k*wx*wy+i] = tmp[i];
+                    in_afi[k*wx*wy+i] = tmp_afi[i];
                 }
                 if(tmp[wx*wy] < thresh)
                 {
@@ -122,11 +151,14 @@ int main(int argc,char ** argv)
             }
             it++;
             delete [] tmp;
+            delete [] tmp_afi;
             if(k>=nsamp)break;
         }
         delete [] dat;
+        delete [] dat_afi;
         std::cout << "pos:" << pos << std::endl;
         std::cout << "neg:" << neg << std::endl;
+
 
         viz_in_dat = new VisualizeDataArray < double > ( nsamp*wx*wy
                                                        , wx*wy
@@ -137,6 +169,16 @@ int main(int argc,char ** argv)
                                                        , -1 , 0 , -1 , 1
                                                        );
         addDisplay ( viz_in_dat );
+
+        viz_in_afi = new VisualizeDataArray < double > ( nsamp*wx*wy
+                                                       , wx*wy
+                                                       , wx*wy
+                                                       , wx
+                                                       , wy
+                                                       , in_afi
+                                                       , 0 , 1 , -1 , 1
+                                                       );
+        addDisplay ( viz_in_afi );
 
         std::vector<long> nodes;
         /* 0 */ nodes.push_back(wx*wy);
