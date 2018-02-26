@@ -44,7 +44,7 @@ struct CNNActivationProbe
               long N = n_features[layer+1];
               long dx = nx[layer];
               long dy = ny[layer];
-              output_conv_dat = new T[M*N*dx*dy];
+              output_conv_dat = new T[N*dx*dy];
               break;
             }
 
@@ -54,14 +54,14 @@ struct CNNActivationProbe
               output_dat = NULL;
               if(input_dat == NULL)
               {
-                  input_dat = new T[perceptron->n_nodes[layer+1]*perceptron->n_nodes[layer]];
+                  input_dat = new T[cnn->n_nodes[layer+1]*cnn->n_nodes[layer]];
               }
-              num_inputs = perceptron->n_nodes[layer];
+              num_inputs = cnn->n_nodes[layer];
               if(output_dat == NULL)
               {
-                  output_dat = new T[perceptron->n_nodes[layer+1]];
+                  output_dat = new T[cnn->n_nodes[layer+1]];
               }
-              num_outputs = perceptron->n_nodes[layer+1];
+              num_outputs = cnn->n_nodes[layer+1];
               break;
             }
 
@@ -82,9 +82,9 @@ struct CNNActivationProbe
               num_kernel = N*M*kx[layer]*ky[layer];
               if(output_conv_dat == NULL)
               {
-                  output_conv_dat = new T[N*M*(dx)*(dy)];
+                  output_conv_dat = new T[N*(dx)*(dy)];
               }
-              num_output_conv = N*M*(dx)*(dy);
+              num_output_conv = N*(dx)*(dy);
               break;
             }
           case MAX_POOLING_LAYER :
@@ -96,7 +96,7 @@ struct CNNActivationProbe
               long N = n_features[layer+1];
               long dx = nx[layer] / pooling_factorx[layer+1];
               long dy = ny[layer] / pooling_factory[layer+1];
-              output_conv_dat = new T[M*N*dx*dy];
+              output_conv_dat = new T[N*dx*dy];
               break;
             }
 
