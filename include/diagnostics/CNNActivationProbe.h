@@ -7,6 +7,8 @@ struct CNNActivationProbe
 
     LayerType layer_type;
 
+    long layer;
+
     long num_inputs;
     long  input_grid_nx;
     long  input_grid_ny;
@@ -34,8 +36,10 @@ struct CNNActivationProbe
     T * kernel_dat;
     T * output_conv_dat;
 
-    CNNActivationProbe(ConvolutionalNeuralNetwork<T> * cnn,long layer)
+    CNNActivationProbe(ConvolutionalNeuralNetwork<T> * cnn,long p_layer)
     {
+
+        layer = p_layer;
 
         layer_type = cnn -> n_layer_type[layer];
 
@@ -45,13 +49,13 @@ struct CNNActivationProbe
             {
               kernel_dat = NULL;
               num_kernel = 0;
-              long M = n_features[layer];
-              long N = n_features[layer+1];
-              long dx = nx[layer];
-              long dy = ny[layer];
+              long M = cnn->n_features[layer];
+              long N = cnn->n_features[layer+1];
+              long dx = cnn->nx[layer];
+              long dy = cnn->ny[layer];
               output_conv_dat = new T[N*dx*dy];
-              num_kernel_kx = kx[layer];
-              num_kernel_ky = ky[layer];
+              num_kernel_kx = cnn->kx[layer];
+              num_kernel_ky = cnn->ky[layer];
               num_output_N = N;
               break;
             }
@@ -96,6 +100,10 @@ struct CNNActivationProbe
               num_kernel_kx = cnn->kx[layer];
               num_kernel_ky = cnn->ky[layer];
               num_output_N = N;
+              input_grid_nx = cnn->kx[layer];
+              input_grid_ny = cnn->ky[layer];
+              output_grid_nx = M;
+              output_grid_ny = N;
               break;
             }
           case MAX_POOLING_LAYER :
@@ -161,17 +169,17 @@ struct CNNActivationProbe
         return false;
     }
 
-    void get_neuron_inputs(ConvolutionalNeuralNetwork<T> * perceptron,long layer)
+    void get_neuron_inputs(ConvolutionalNeuralNetwork<T> * cnn,long layer)
     {
         switch ( layer_type )
         {
           case FULLY_CONNECTED_LAYER :
             {
-              for(long i=0,k=0;i<perceptron->n_nodes[layer+1];i++)
+              for(long i=0,k=0;i<cnn->n_nodes[layer+1];i++)
               {
-                  for(long j=0;j<perceptron->n_nodes[layer];j++,k++)
+                  for(long j=0;j<cnn->n_nodes[layer];j++,k++)
                   {
-                      input_dat[k] = perceptron->weights_neuron[layer][i][j];
+                      input_dat[k] = cnn->weights_neuron[layer][i][j];
                   }
               }
               break;
@@ -184,6 +192,8 @@ struct CNNActivationProbe
               long wy = (cnn->ky[layer]/2);
               long dx = cnn->nx[layer] - wx*2;
               long dy = cnn->ny[layer] - wy*2;
+              long kx = cnn->kx[layer];
+              long ky = cnn->ky[layer];
               for(long n=0,k=0;n<N;n++)
               {
                   for(long m=0;m<M;m++)
@@ -212,19 +222,19 @@ struct CNNActivationProbe
         }
     }
 
-    void get_neuron_outputs(ConvolutionalNeuralNetwork<T> * perceptron,long layer)
+    void get_neuron_outputs(ConvolutionalNeuralNetwork<T> * cnn,long layer)
     {
         switch ( layer_type )
         {
           case FULLY_CONNECTED_LAYER :
             {
-              for(long i=0;i<perceptron->n_nodes[layer+1];i++)
+              for(long i=0;i<cnn->n_nodes[layer+1];i++)
               {
                   T sum = 0;
-                  for(long j=0;j<perceptron->n_nodes[layer];j++)
+                  for(long j=0;j<cnn->n_nodes[layer];j++)
                   {
-                      sum += perceptron->activation_values1[layer]   [j] 
-                           * perceptron->   weights_neuron [layer][i][j];
+                      sum += cnn->activation_values1[layer]   [j] 
+                           * cnn->   weights_neuron [layer][i][j];
                   }
                   output_dat[i] = sigmoid(sum,0);
               }
@@ -238,6 +248,10 @@ struct CNNActivationProbe
               long wy = (cnn->ky[layer]/2);
               long dx = cnn->nx[layer] - wx*2;
               long dy = cnn->ny[layer] - wy*2;
+              long kx = cnn->kx[layer];
+              long ky = cnn->ky[layer];
+              long nx = cnn->nx[layer];
+              long ny = cnn->ny[layer];
               T factor = 1.0 / (kx*ky);
               {
                   for(long n=0,i=0;n<N;n++)
@@ -254,8 +268,8 @@ struct CNNActivationProbe
                               for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
                               {
                                   // W * y
-                                  sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                       * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
+                                  sum += cnn->weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                       * cnn->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
                                        * factor;
                               }
                           }
@@ -267,14 +281,14 @@ struct CNNActivationProbe
             }
           case MAX_POOLING_LAYER :
             {
-              long M = g->n_features[layer];
-              long nx = g->nx[layer];
-              long ny = g->ny[layer];
-              long factorx = g->pooling_factorx[layer];
-              long factory = g->pooling_factory[layer];
+              long M = cnn->n_features[layer];
+              long nx = cnn->nx[layer];
+              long ny = cnn->ny[layer];
+              long factorx = cnn->pooling_factorx[layer];
+              long factory = cnn->pooling_factory[layer];
               long dx = nx / factorx;
               long dy = ny / factory;
-              T tmp_val,mean_val;
+              T tmp_val,max_val;
               for(long m=0,i=0;m<M;m++)
               {
                   for(long y=0,oy=0;y<ny;y+=factory,oy++)
@@ -284,7 +298,7 @@ struct CNNActivationProbe
                       for(long ty=0;ty<factory;ty++)
                       for(long tx=0;tx<factorx;tx++)
                       {
-                          tmp_val = g->activation_values[layer][m*nx*nx+nx*y+x];
+                          tmp_val = cnn->activation_values[layer][m*nx*nx+nx*y+x];
                           if(tmp_val>max_val)
                           {
                             max_val = tmp_val;
@@ -297,11 +311,11 @@ struct CNNActivationProbe
             }
           case MEAN_POOLING_LAYER :
             {
-              long M = g->n_features[layer];
-              long nx = g->nx[layer];
-              long ny = g->ny[layer];
-              long factorx = g->pooling_factorx[layer];
-              long factory = g->pooling_factory[layer];
+              long M = cnn->n_features[layer];
+              long nx = cnn->nx[layer];
+              long ny = cnn->ny[layer];
+              long factorx = cnn->pooling_factorx[layer];
+              long factory = cnn->pooling_factory[layer];
               long dx = nx / factorx;
               long dy = ny / factory;
               T tmp_val,mean_val;
@@ -315,7 +329,7 @@ struct CNNActivationProbe
                       for(long ty=0;ty<factory;ty++)
                       for(long tx=0;tx<factorx;tx++)
                       {
-                          mean_val += g->activation_values[layer][m*nx*nx+nx*y+x];
+                          mean_val += cnn->activation_values[layer][m*nx*nx+nx*y+x];
                       }
                       output_conv_dat[i] = mean_val * factor;
                   }
@@ -324,9 +338,9 @@ struct CNNActivationProbe
             }
           case RELU_LAYER :
             {
-              for(long i=0;i<g->n_nodes[layer+1];i++)
+              for(long i=0;i<cnn->n_nodes[layer+1];i++)
               {
-                  output_conv_dat[i] = max(0.0,g->activation_values[layer][i]);
+                  output_conv_dat[i] = max(0.0,cnn->activation_values[layer][i]);
               }
               break;
             }
