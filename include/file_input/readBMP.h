@@ -38,7 +38,7 @@ struct Image {
         size = 0;
         width = 0;
     }
-    double * get_doubles(int nx,int ny,int dx=1,int dy=1) 
+    double * get_doubles(int nx,int ny,int dx=1,int dy=1,int col=0,bool monochromatic=true) 
     {
         long NX = dx*sizeX/nx-(dx-1);
         long NY = dy*sizeY/ny-(dy-1);
@@ -54,7 +54,19 @@ struct Image {
                     {
                         for(int x=0;x<nx;x++,k++)
                         {
-                            ret[k] =  (double)((unsigned char)data[3*(sizeX*((NY-1-Y)*(ny/dy)+      y )+X*(nx/dx)+x)]/256.0);
+                            if(monochromatic)
+                            {
+                                ret[k] =  (double)((unsigned char)data[3*(sizeX*((NY-1-Y)*(ny/dy)+      y )+X*(nx/dx)+x)+col]/256.0);
+                            }
+                            else
+                            {
+                                if ( (unsigned char)data[3*(sizeX*((NY-1-Y)*(ny/dy)+      y )+X*(nx/dx)+x)+(col+1)%3] == 0
+                                  && (unsigned char)data[3*(sizeX*((NY-1-Y)*(ny/dy)+      y )+X*(nx/dx)+x)+(col+2)%3] == 0
+                                   )
+                                {
+                                    ret[k] =  (double)((unsigned char)data[3*(sizeX*((NY-1-Y)*(ny/dy)+      y )+X*(nx/dx)+x)+col]/256.0);
+                                }
+                            }
                         }
                     }
                 }

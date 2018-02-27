@@ -213,13 +213,28 @@ struct VisualizeCNNActivationProbe : public Display < T >
               {
                   for(long ox=0;ox<p_cnn_activation_probe->output_grid_nx;ox++,o++)
                   {
+                      T min_dat = 1e10;
+                      T max_dat =-1e10;
+                      long k_prev = k;
+                      for(long iy=0;iy<p_cnn_activation_probe->input_grid_ny;iy++)
+                      {
+                          for(long ix=0;ix<p_cnn_activation_probe->input_grid_nx;ix++,k++)
+                          {
+                              val = p_cnn_activation_probe ->  kernel_dat [ k ] ;
+                              min_dat = (val<min_dat)?val:min_dat;
+                              max_dat = (val>max_dat)?val:max_dat;
+
+                          }
+                      }
+                      k = k_prev;
+                      T factor = 1.0 / (max_dat-min_dat+1e-5);
                       for(long iy=0;iy<p_cnn_activation_probe->input_grid_ny;iy++)
                       {
                           for(long ix=0;ix<p_cnn_activation_probe->input_grid_nx;ix++,k++)
                           {
                               val  = p_cnn_activation_probe ->  kernel_dat [ k ] ;
+                              val  = (val - min_dat)*factor;
                               //val2 = p_cnn_activation_probe -> output_dat [ o ] ;
-                              val += 0.5;
                               glColor3f(val,val,val);
                               glVertex3f( min_x + (max_x-min_x)*(out_dx * ox + out_dx * in_dx* ix     )
                                         , min_y + (max_y-min_y)*(out_dy * oy + out_dy * in_dy* iy     )

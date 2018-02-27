@@ -200,6 +200,8 @@ void keyboard(unsigned char Key, int x, int y)
     case 's':change_down_index=true;break;
     case 'm':scale_factor*=1.1;std::cout << scale_factor << std::endl;break;
     case 'n':scale_factor/=1.1;std::cout << scale_factor << std::endl;break;
+    case 'k':scale_factor_2*=1.1;std::cout << scale_factor_2 << std::endl;break;
+    case 'j':scale_factor_2/=1.1;std::cout << scale_factor_2 << std::endl;break;
     case 27:
       {
         exit(1);

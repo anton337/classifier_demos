@@ -1,7 +1,8 @@
 #ifndef CONVOLUTIONAL_NEURAL_NETWORK_H
 #define CONVOLUTIONAL_NEURAL_NETWORK_H
 
-float scale_factor = 1000;
+float scale_factor = 1;
+float scale_factor_2 = 1;
 
 #include <iostream>
 #include <fstream>
@@ -271,9 +272,15 @@ struct cnn_training_info
                                 mu_weights_neuron[layer][i][j] = 0;
                             }
                         }
-                        partial_weights_bias[layer] = NULL;
-                        mu_partial_weights_bias[layer] = NULL;
-                        mu_weights_bias[layer] = NULL;
+                        partial_weights_bias[layer] = new T[N*dx*dy];
+                        mu_partial_weights_bias[layer] = new T[N*dx*dy];
+                        mu_weights_bias[layer] = new T[N*dx*dy];
+                        for(long i=0;i<N*dx*dy;i++)
+                        {
+                            partial_weights_bias[layer][i] = 0;
+                            mu_partial_weights_bias[layer][i] = 0;
+                            mu_weights_bias[layer][i] = 0;
+                        }
                         break;
                     }
                 case RELU_LAYER :
@@ -518,14 +525,14 @@ struct cnn_training_info
                                 {
                                     for(long j=0;j<n_nodes[layer];j++,k++)
                                     {
-                                        weights_neuron[layer][i][j] += epsilon * partial_weights_neuron[layer][i][j];
+                                        weights_neuron[layer][i][j] += scale_factor_2*epsilon * partial_weights_neuron[layer][i][j];
                                     }
                                 }
                             }
                             {
                                 for(long i=0;i<n_nodes[layer+1];i++,k++)
                                 {
-                                    weights_bias[layer][i] += epsilon * partial_weights_bias[layer][i];
+                                    weights_bias[layer][i] += scale_factor_2*epsilon * partial_weights_bias[layer][i];
                                 }
                             }
                             break;
@@ -562,12 +569,12 @@ struct cnn_training_info
                                     //std::cout << layer << '\t' << i << '\t' << sum << std::endl;
                                 }
                             }
-                            //{
-                            //    for(long i=0;i<n_nodes[layer+1];i++,k++)
-                            //    {
-                            //        weights_bias[layer][i] += epsilon * partial_weights_bias[layer][i];
-                            //    }
-                            //}
+                            {
+                                for(long i=0;i<N*dx*dy;i++,k++)
+                                {
+                                    weights_bias[layer][i] += scale_factor*epsilon * partial_weights_bias[layer][i];
+                                }
+                            }
                             break;
                         }
                     default :
@@ -733,7 +740,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long oy=0;oy<dy;oy++)
                                     for(long ox=0;ox<dx;ox++,i++)
                                     {
-                                        T sum = 0.0;//g->weights_bias[layer][i];
+                                        T sum = g->weights_bias[layer][i];
                                         long ix = ox+wx;
                                         long iy = oy+wy;
                                         for(long m=0;m<M;m++)
@@ -1076,17 +1083,30 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case CONVOLUTIONAL_LAYER :
                         {
-                            //for(long i=0;i<g->n_nodes[layer+1];i++)
-                            //{
-                            //        g->partial_weights_bias[layer][i] += 
-                            //            ( 
-                            //                (
-                            //                    g->deltas[layer+1][i] 
-                            //                )
-                            //              
-                            //            - g->partial_weights_bias[layer][i] 
-                            //            ) * avg_factor;
-                            //}
+                            if(layer>0)
+                            {
+                                long M = g->n_features[layer];
+                                long N = g->n_features[layer+1];
+                                long kx = g->kx[layer];
+                                long ky = g->ky[layer];
+                                long nx = g->nx[layer];
+                                long ny = g->ny[layer];
+                                long wx = (kx/2);
+                                long wy = (ky/2);
+                                long dx = nx - wx*2;
+                                long dy = ny - wy*2;
+                                for(long i=0;i<N*dx*dy;i++)
+                                {
+                                        g->partial_weights_bias[layer][i] += 
+                                            ( 
+                                                (
+                                                    g->deltas[layer+1][i] 
+                                                )
+                                              
+                                            - g->partial_weights_bias[layer][i] 
+                                            ) * avg_factor;
+                                }
+                            }
                             break;
                         }
                     case RELU_LAYER :
@@ -1128,105 +1148,106 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case CONVOLUTIONAL_LAYER :
                         {
-                            long M = g->n_features[layer];
-                            long N = g->n_features[layer+1];
-                            long kx = g->kx[layer];
-                            long ky = g->ky[layer];
-                            long nx = g->nx[layer];
-                            long ny = g->ny[layer];
-                            long wx = (kx/2);
-                            long wy = (ky/2);
-                            long dx = nx - wx*2;
-                            long dy = ny - wy*2;
+                            if(layer>0)
                             {
+                                long M = g->n_features[layer];
+                                long N = g->n_features[layer+1];
+                                long kx = g->kx[layer];
+                                long ky = g->ky[layer];
+                                long nx = g->nx[layer];
+                                long ny = g->ny[layer];
+                                long wx = (kx/2);
+                                long wy = (ky/2);
+                                long dx = nx - wx*2;
+                                long dy = ny - wy*2;
+                                {
+                                    for(long n=0;n<N;n++)
+                                    {
+                                        for(long ty=0;ty<ky;ty++)
+                                        {
+                                            for(long m=0;m<M;m++)
+                                            {
+                                                for(long tx=0;tx<kx;tx++)
+                                                {
+                                                    long x = kx*m+tx;
+                                                    long y = ky*n+ty;
+                                                    g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                T max_disp = 0;
+                                T max_wght = 0;
+                                T tmp_disp;
+                                T fact = 1.0;
                                 for(long n=0;n<N;n++)
                                 {
-                                    for(long ty=0;ty<ky;ty++)
+                                    for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
                                     {
+                                        //std::cout << m << '\t' << tx << '\t' << kx*m+tx << std::endl;
+                                        //std::cout << n << '\t' << ty << '\t' << ky*n+ty << std::endl;
+                                        T sum_deltas = 0;
+                                        T sum_activation = 0;
                                         for(long m=0;m<M;m++)
                                         {
-                                            for(long tx=0;tx<kx;tx++)
+                                            for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
                                             {
-                                                long x = kx*m+tx;
-                                                long y = ky*n+ty;
-                                                g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
+                                                for(long vy=0;vy<dy;vy++)
+                                                for(long vx=0;vx<dx;vx++)
+                                                {
+                                                    long iy = vy+wy;
+                                                    long ix = vx+wx;
+                                                    g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
+                                                            (
+                                                                // dEdy
+                                                                g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
+                                                                // y
+                                                              * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
+                                                            ) * fact
+                                                            ;
+                                                    sum_deltas += g->deltas[layer+1][(dx*dy)*n + dx*vy + vx];
+                                                    sum_activation += g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                                                }
                                             }
                                         }
+                                        //std::cout << sum_deltas << '\t' << sum_activation << std::endl;
                                     }
                                 }
-                            }
-                            T max_disp = 0;
-                            T max_wght = 0;
-                            T tmp_disp;
-                            T fact = 1.0;
-                            for(long n=0;n<N;n++)
-                            {
-                                for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
+                                //{
+                                //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+                                //    for(long i=0;i<ky*N;i++)
+                                //    {
+                                //        T sum = 0;
+                                //        for(long j=0;j<kx*M;j++)
+                                //        {
+                                //            sum += g->mu_partial_weights_neuron[layer][i][j];
+                                //        }
+                                //        std::cout << ">>>\t" << layer << '\t' << i << '\t' << sum << std::endl;
+                                //    }
+                                //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+                                //}
                                 {
-                                    //std::cout << m << '\t' << tx << '\t' << kx*m+tx << std::endl;
-                                    //std::cout << n << '\t' << ty << '\t' << ky*n+ty << std::endl;
-                                    T sum_deltas = 0;
-                                    T sum_activation = 0;
-                                    for(long m=0;m<M;m++)
+                                    for(long n=0;n<N;n++)
                                     {
-                                        for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
+                                        for(long ty=0;ty<ky;ty++)
                                         {
-                                            for(long vy=0;vy<dy;vy++)
-                                            for(long vx=0;vx<dx;vx++)
+                                            for(long m=0;m<M;m++)
                                             {
-                                                long iy = vy+wy;
-                                                long ix = vx+wx;
-                                                g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
-                                                        (
-                                                            // dEdy
-                                                            g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
-                                                            // y
-                                                          * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
-                                                        ) * fact
-                                                        ;
-                                                sum_deltas += g->deltas[layer+1][(dx*dy)*n + dx*vy + vx];
-                                                sum_activation += g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
-                                            }
-                                        }
-                                    }
-                                    //std::cout << sum_deltas << '\t' << sum_activation << std::endl;
-                                }
-                            }
-                            //{
-                            //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-                            //    for(long i=0;i<ky*N;i++)
-                            //    {
-                            //        T sum = 0;
-                            //        for(long j=0;j<kx*M;j++)
-                            //        {
-                            //            sum += g->mu_partial_weights_neuron[layer][i][j];
-                            //        }
-                            //        std::cout << ">>>\t" << layer << '\t' << i << '\t' << sum << std::endl;
-                            //    }
-                            //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-                            //}
-                            {
-                                for(long n=0;n<N;n++)
-                                {
-                                    for(long ty=0;ty<ky;ty++)
-                                    {
-                                        for(long m=0;m<M;m++)
-                                        {
-                                            for(long tx=0;tx<kx;tx++)
-                                            {
-                                                g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] +=
-                                                  (
-                                                      g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                  -   g->   partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                  ) * avg_factor
-                                                  ;
+                                                for(long tx=0;tx<kx;tx++)
+                                                {
+                                                    g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] +=
+                                                      (
+                                                          g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                                      -   g->   partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                                      ) * avg_factor
+                                                      ;
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                            //std::cout << "max disp:" << max_disp << std::endl;
-                            //std::cout << "max wght:" << max_wght << std::endl;
                             break;
                         }
                     case RELU_LAYER :
@@ -1350,6 +1371,29 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
         }
         */
     }
+}
+
+template<typename T>
+T * Gabor ( long nx
+          , long ny 
+          , T lambda
+          , T theta
+          , T phi
+          , T sigma
+          , T gamma
+          )
+{
+    T * out = new T[nx*ny];
+    long wx=nx/2;
+    long wy=ny/2;
+    for(long x=-wx,k=0;x<=wx;x++)
+    for(long y=-wy;y<=wy;y++,k++)
+    {
+        double X = x*cos(theta) + y*sin(theta);
+        double Y = y*sin(theta) - x*cos(theta);
+        out[k] = exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
+    }
+    return out;
 }
 
 template<typename T>
@@ -1693,48 +1737,91 @@ struct ConvolutionalNeuralNetwork
                             }
                         }
                         {
-                            for(long m=0,i=0;m<M;m++)
+                            if(layer == 0)
                             {
+                                // T * Gabor ( long nx
+                                //           , long ny 
+                                //           , T lambda
+                                //           , T theta
+                                //           , T phi
+                                //           , T sigma
+                                //           , T gamma
+                                //           )
+                                for(long m=0,i=0;m<M;m++)
                                 {
-                                    for(long n=0;n<N;n++)
                                     {
-                                        for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
-                                        for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                        for(long n=0;n<N;n++)
                                         {
-                                            if(n==0)
+                                            T * gab = Gabor < double > ( kx[layer]          // nx
+                                                                       , ky[layer]          // ny
+                                                                       , kx[layer]          // lambda
+                                                                       , 2*M_PI*(double)n/N // theta
+                                                                       , M_PI/2             // phi
+                                                                       , kx[layer]          // sigma
+                                                                       , 1.0                // gamma
+                                                                       );
+                                            for(long fy=-wy,ty=0,t=0;fy<=wy;fy++,ty++)
+                                            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++,t++)
                                             {
-                                                weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = gab[t];
+                                                }
                                             }
-                                            else
-                                            if(n==1)
+                                            delete [] gab;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                for(long m=0,i=0;m<M;m++)
+                                {
+                                    {
+                                        for(long n=0;n<N;n++)
+                                        {
+                                            for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                                            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
                                             {
-                                                weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx>=fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                            }
-                                            else
-                                            if(n==2)
-                                            {
-                                                weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fy>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                            }
-                                            else
-                                            if(n==3)
-                                            {
-                                                weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx>=-fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                            }
-                                            else
-                                            {
-                                                weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx==0&&fy==0)?1:0.5*(-1+2*((rand()%10000)/10000.0));
+                                                if(n==0)
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = (fx>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                }
+                                                else
+                                                if(n==1)
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = (fx>=fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                }
+                                                else
+                                                if(n==2)
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = (fy>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                }
+                                                else
+                                                if(n==3)
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = (fx>=-fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                }
+                                                else
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = (fx==0&&fy==0)?1:0.5*(-1+2*((rand()%10000)/10000.0));
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                        weights_bias[layer] = NULL;
+                        weights_bias[layer] = new T[N*dx*dy];
+                        for(long i=0;i<N*dx*dy;i++)
+                        {
+                            weights_bias[layer][i] = 0;
+                        }
                         break;
                     }
                 case RELU_LAYER :
@@ -2027,11 +2114,6 @@ struct ConvolutionalNeuralNetwork
             if(stop_training)
             {
                 stop_training = false;
-                break;
-            }
-
-            if(100*error/live_count < 5)
-            {
                 break;
             }
 

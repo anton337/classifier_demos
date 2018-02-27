@@ -61,11 +61,10 @@ void read_segy(std::string filename,std::string output)
             //    std::cout << i << " " << index << std::endl;
             //}
             short nsamp_verify = 256*(256*(256*trace[112] + trace[113]) + trace[114]) + trace[115];
-            //std::cout << "nsamp verify:" << nsamp_verify << std::endl;
             short ind_y = 256*(256*(256*trace[192] + trace[193]) + trace[194]) + trace[195];
-            //std::cout << "ind_x:" << ind_x << std::endl;
             short ind_x = 256*(256*(256*trace[188] + trace[189]) + trace[190]) + trace[191];
-            //std::cout << "ind_y:" << ind_y << std::endl;
+            //short ind_y = 256*(256*(256*trace[184] + trace[185]) + trace[186]) + trace[187];
+            //short ind_x = 256*(256*(256*trace[180] + trace[181]) + trace[182]) + trace[183];
             if(nsamp_verify!=nsamp)
             {
                 std::cout << "nsamp doesnt match" << std::endl;
@@ -101,6 +100,14 @@ void read_segy(std::string filename,std::string output)
 
     long k_start = 240;
 
+    long dx = 10000;
+    long dy = 10000;
+
+    long prev_x;
+    long prev_y;
+    long cdp_trigger = 1e10;
+    long cdp_ind = 0;
+
     {
         long x_prev = -2;
         long x_curr = -1;
@@ -122,10 +129,10 @@ void read_segy(std::string filename,std::string output)
             //    std::cout << i << " " << index << std::endl;
             //}
             short nsamp_verify = 256*(256*(256*trace[112] + trace[113]) + trace[114]) + trace[115];
-            //std::cout << "nsamp verify:" << nsamp_verify << std::endl;
             short ind_y = 256*(256*(256*trace[192] + trace[193]) + trace[194]) + trace[195];
-            //std::cout << "ind_x:" << ind_x << std::endl;
             short ind_x = 256*(256*(256*trace[188] + trace[189]) + trace[190]) + trace[191];
+            short cdp_y = 256*(256*(256*trace[184] + trace[185]) + trace[186]) + trace[187];
+            short cdp_x = 256*(256*(256*trace[180] + trace[181]) + trace[182]) + trace[183];
             if(x_prev != x_curr&&x_prev>=0&&x_curr>=0)
             {
                 ofile . write(reinterpret_cast<char*>(&dat[0]),4L*ny*nz);
@@ -142,7 +149,21 @@ void read_segy(std::string filename,std::string output)
             }
             long x = (ind_x - min_x);
             long y = (ind_y - min_y);
+            if((x-prev_x)*(x-prev_x) < dx*dx && (x-prev_x) != 0)
+            {
+                dx = (x-prev_x>0)?x-prev_x:prev_x-x;
+            }
+            if((y-prev_y)*(y-prev_y) < dy*dy && (y-prev_y) != 0)
+            {
+                dy = (y-prev_y>0)?y-prev_y:prev_y-y;
+            }
+            if(cdp_trigger > cdp_x){cdp_ind++;}
+            //std::cout << cdp_ind << '\t' << dx << '\t' << dy << '\t' << cdp_x << '\t' << cdp_y << '\t' << x << '\t' << y << std::endl;
+            cdp_trigger = cdp_x;
+            prev_x = x;
+            prev_y = y;
             long z = 0;
+            //if(cdp_ind%2==0)
             for(long k=k_start;k<trace_len;k+=4,z++)
             {
                 tmp_val = swap_endian(*reinterpret_cast<float*>(&trace[k]));
@@ -164,6 +185,9 @@ void read_segy(std::string filename,std::string output)
     std::cout << "nz:" << nz << std::endl;
     std::cout << "ny:" << ny << std::endl;
     std::cout << "nx:" << nx << std::endl;
+
+    std::cout << "dy:" << dy << std::endl;
+    std::cout << "dx:" << dx << std::endl;
 
     std::cout << "done." << std::endl;
 

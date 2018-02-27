@@ -12,7 +12,7 @@ VisualizeDataArray < double > * viz_in_dat_1d = NULL;
 long nx = 32;
 long ny = 32;
 long nsamp = 10000;
-long tmp_samp = 50;
+long tmp_samp = 5000;
 
 double * in = new double[3*nx*ny*nsamp];
 double * in_1d = new double[nx*ny*nsamp];
@@ -21,43 +21,7 @@ double * dat = NULL;
 
 void train_cnn()
 {
-  bool init = true;
-  for(;tmp_samp<nsamp;tmp_samp+=10)
-  {
-    for(long i=0;i<nsamp;i++)
-    {
-      if(i<tmp_samp)
-      {
-        out[i] = 256*dat[i*(3*nx*ny+1)];
-        if((int)round(out[i]) == 5)
-        {
-            out[i] = 1;
-        }
-        else 
-        if((int)round(out[i]) == 6)
-        {
-            out[i] = 1e-5;
-        }
-        else
-        {
-            out[i] = 0;
-        }
-      }
-      else
-      {
-        out[i] = 0;
-      }
-    }
-    if(init)
-    {
-      model -> train(0,.1,1000,nsamp,nx*ny,1,in_1d,out);
-      init = false;
-    }
-    else
-    {
-      model -> train(0,.1,1000,nsamp,nx*ny,1,in_1d,out);
-    }
-  }
+      model -> train(0,.1,10000,nsamp,nx*ny,1,in_1d,out);
 }
 
 int main(int argc,char ** argv)
@@ -103,30 +67,30 @@ int main(int argc,char ** argv)
             {
                 out[i] = 0;
             }
-            d = d_init;
-            for(long x=0;x<nx;x++)
-            for(long y=0;y<ny;y++,d++)
-            {
-              switch((int)(256*dat[i*(3*nx*ny+1)]) % 4)
-              {
-                case 0:
-                  in_1d[d] = (x==nx/2)?1:0;
-                  break;
-                case 1:
-                  in_1d[d] = (y==ny/2)?1:0;
-                  break;
-                case 2:
-                  in_1d[d] = (x+y==2*ny/2)?1:0;
-                  break;
-                case 3:
-                  in_1d[d] = (x-y==0)?1:0;
-                  break;
-              }
-            }
-            if(i<tmp_samp)
-            {
-                std::cout << out[i] << std::endl;
-            }
+            //d = d_init;
+            //for(long x=0;x<nx;x++)
+            //for(long y=0;y<ny;y++,d++)
+            //{
+            //  switch((int)(256*dat[i*(3*nx*ny+1)]) % 4)
+            //  {
+            //    case 0:
+            //      in_1d[d] = (x==nx/2)?1:0;
+            //      break;
+            //    case 1:
+            //      in_1d[d] = (y==ny/2)?1:0;
+            //      break;
+            //    case 2:
+            //      in_1d[d] = (x+y==2*ny/2)?1:0;
+            //      break;
+            //    case 3:
+            //      in_1d[d] = (x-y==0)?1:0;
+            //      break;
+            //  }
+            //}
+            //if(i<tmp_samp)
+            //{
+            //    std::cout << out[i] << std::endl;
+            //}
         }
         viz_in_dat = new VisualizeDataArrayColor < double > ( nsamp*3*nx*ny
                                                             , 3*nx*ny
@@ -148,13 +112,13 @@ int main(int argc,char ** argv)
         addDisplay ( viz_in_dat_1d );
         std::vector<long> nodes;
         /* 0 */ nodes.push_back(nx*ny);
-        /* 1 */ nodes.push_back(18816);
-        /* 2 */ nodes.push_back(4704); 
-        /* 3 */ nodes.push_back(10000);
-        /* 4 */ nodes.push_back(2500);
-        /* 5 */ nodes.push_back(2500);
-        /* 7 */ nodes.push_back(500);   
-        /* 8 */ nodes.push_back(100);   
+        /* 1 */ nodes.push_back(6272);
+        /* 2 */ nodes.push_back(1568); 
+        /* 3 */ nodes.push_back(1600);
+        /* 4 */ nodes.push_back(400);
+        /* 5 */ nodes.push_back(400);
+        /* 7 */ nodes.push_back(100);   
+        /* 8 */ nodes.push_back(25);   
         /*   */ nodes.push_back(1);    
         /*   */ nodes.push_back(1);    
         std::vector<LayerType> layer_type;          
@@ -188,11 +152,11 @@ int main(int argc,char ** argv)
         activation_type.push_back(LOGISTIC);
         std::vector<long> features;
         features.push_back(1);
-        features.push_back(24);
-        features.push_back(24);
-        features.push_back(100);
-        features.push_back(100);
-        features.push_back(100);
+        features.push_back(8);
+        features.push_back(8);
+        features.push_back(16);
+        features.push_back(16);
+        features.push_back(16);
         features.push_back(1);
         features.push_back(1);
         features.push_back(1);
@@ -323,10 +287,10 @@ int main(int argc,char ** argv)
         VisualizeCNNActivationProbe < double > * viz_cnn_activation5 = NULL;
         viz_cnn_activation5 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 5 )
-                                                                         , 50 // in_nx
-                                                                         , 25 // out_nx
-                                                                         , 50 // in_ny
-                                                                         , 20 // out_ny
+                                                                         , 20 // in_nx
+                                                                         , 10 // out_nx
+                                                                         , 20 // in_ny
+                                                                         , 10 // out_ny
                                                                          , 0.5 , 0.75
                                                                          ,-1 , 1
                                                                          );
@@ -335,10 +299,10 @@ int main(int argc,char ** argv)
         VisualizeCNNActivationProbe < double > * viz_cnn_activation6 = NULL;
         viz_cnn_activation6 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 6 )
-                                                                         , 25 // in_nx
-                                                                         , 10 // out_nx
-                                                                         , 20 // in_ny
-                                                                         , 10 // out_ny
+                                                                         , 10 // in_nx
+                                                                         , 5  // out_nx
+                                                                         , 10 // in_ny
+                                                                         , 5  // out_ny
                                                                          , 0.75 , 1
                                                                          ,-1 , 1
                                                                          );
