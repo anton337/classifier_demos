@@ -1,6 +1,8 @@
 #ifndef CONVOLUTIONAL_NEURAL_NETWORK_H
 #define CONVOLUTIONAL_NEURAL_NETWORK_H
 
+float scale_factor = 1000;
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -58,6 +60,8 @@ struct cnn_training_info
     T **  weights_bias;
     T *** partial_weights_neuron;
     T **  partial_weights_bias;
+
+    T *** tmp_partial_weights_neuron;
 
     T *** mu_weights_neuron;
     T **  mu_weights_bias;
@@ -188,6 +192,7 @@ struct cnn_training_info
         }
         partial_weights_neuron = new T**[n_layers];
         partial_weights_bias = new T*[n_layers];
+        tmp_partial_weights_neuron = new T**[n_layers];
         mu_partial_weights_neuron = new T**[n_layers];
         mu_partial_weights_bias = new T*[n_layers];
         mu_weights_neuron = new T**[n_layers];
@@ -199,16 +204,19 @@ struct cnn_training_info
                 case FULLY_CONNECTED_LAYER :
                     {
                         partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
+                        tmp_partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
                         mu_partial_weights_neuron[layer] = new T*[n_nodes[layer+1]];
                         mu_weights_neuron[layer] = new T*[n_nodes[layer+1]];
                         for(long i=0;i<n_nodes[layer+1];i++)
                         {
                             partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
+                            tmp_partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
                             mu_partial_weights_neuron[layer][i] = new T[n_nodes[layer]];
                             mu_weights_neuron[layer][i] = new T[n_nodes[layer]];
                             for(long j=0;j<n_nodes[layer];j++)
                             {
                                 partial_weights_neuron[layer][i][j] = 0;
+                                tmp_partial_weights_neuron[layer][i][j] = 0;
                                 mu_partial_weights_neuron[layer][i][j] = 0;
                                 mu_weights_neuron[layer][i][j] = 0;
                             }
@@ -246,16 +254,19 @@ struct cnn_training_info
                         long dy = ny[layer] - wy*2;
                         std::cout << "conv dim:" << ky[layer]*N << "x" << kx[layer]*M << std::endl;
                         partial_weights_neuron[layer] = new T*[ky[layer]*N];
+                        tmp_partial_weights_neuron[layer] = new T*[ky[layer]*N];
                         mu_partial_weights_neuron[layer] = new T*[ky[layer]*N];
                         mu_weights_neuron[layer] = new T*[ky[layer]*N];
                         for(long i=0;i<ky[layer]*N;i++)
                         {
                             partial_weights_neuron[layer][i] = new T[kx[layer]*M];
+                            tmp_partial_weights_neuron[layer][i] = new T[kx[layer]*M];
                             mu_partial_weights_neuron[layer][i] = new T[kx[layer]*M];
                             mu_weights_neuron[layer][i] = new T[kx[layer]*M];
                             for(long j=0;j<kx[layer]*M;j++)
                             {
                                 partial_weights_neuron[layer][i][j] = 0;
+                                tmp_partial_weights_neuron[layer][i][j] = 0;
                                 mu_partial_weights_neuron[layer][i][j] = 0;
                                 mu_weights_neuron[layer][i][j] = 0;
                             }
@@ -270,6 +281,7 @@ struct cnn_training_info
                 case MEAN_POOLING_LAYER :
                     {
                         partial_weights_neuron[layer] = NULL;
+                        tmp_partial_weights_neuron[layer] = NULL;
                         mu_partial_weights_neuron[layer] = NULL;
                         mu_weights_neuron[layer] = NULL;
                         partial_weights_bias[layer] = NULL;
@@ -377,10 +389,12 @@ struct cnn_training_info
                         for(long i=0;i<n_nodes[layer+1];i++)
                         {
                             delete [] partial_weights_neuron[layer][i];
+                            delete [] tmp_partial_weights_neuron[layer][i];
                             delete [] mu_partial_weights_neuron[layer][i];
                             delete [] mu_weights_neuron[layer][i];
                         }
                         delete [] partial_weights_neuron[layer];
+                        delete [] tmp_partial_weights_neuron[layer];
                         delete [] mu_partial_weights_neuron[layer];
                         delete [] mu_weights_neuron[layer];
                         delete [] partial_weights_bias[layer];
@@ -399,10 +413,12 @@ struct cnn_training_info
                         for(long i=0;i<ky[layer]*N;i++)
                         {
                             delete [] partial_weights_neuron[layer][i];
+                            delete [] tmp_partial_weights_neuron[layer][i];
                             delete [] mu_partial_weights_neuron[layer][i];
                             delete [] mu_weights_neuron[layer][i];
                         }
                         delete [] partial_weights_neuron[layer];
+                        delete [] tmp_partial_weights_neuron[layer];
                         delete [] mu_partial_weights_neuron[layer];
                         delete [] mu_weights_neuron[layer];
                         break;
@@ -412,6 +428,7 @@ struct cnn_training_info
             }
         }
         delete [] partial_weights_neuron;
+        delete [] tmp_partial_weights_neuron;
         delete [] mu_partial_weights_neuron;
         delete [] mu_weights_neuron;
         delete [] partial_weights_bias;
@@ -539,7 +556,7 @@ struct cnn_training_info
                                     T sum = 0;
                                     for(long j=0;j<kx[layer]*M;j++,k++)
                                     {
-                                        weights_neuron[layer][i][j] += 100*epsilon * partial_weights_neuron[layer][i][j];
+                                        weights_neuron[layer][i][j] += scale_factor*epsilon * partial_weights_neuron[layer][i][j];
                                         sum += partial_weights_neuron[layer][i][j];
                                     }
                                     //std::cout << layer << '\t' << i << '\t' << sum << std::endl;
@@ -1132,7 +1149,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                             {
                                                 long x = kx*m+tx;
                                                 long y = ky*n+ty;
-                                                g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
+                                                g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
                                             }
                                         }
                                     }
@@ -1159,7 +1176,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                             {
                                                 long iy = vy+wy;
                                                 long ix = vx+wx;
-                                                g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
+                                                g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
                                                         (
                                                             // dEdy
                                                             g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
@@ -1199,18 +1216,10 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                             {
                                                 g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] +=
                                                   (
-                                                      g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                                      g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
                                                   -   g->   partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
                                                   ) * avg_factor
                                                   ;
-                                                if(fabs(g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx])>max_disp)
-                                                {
-                                                  max_disp = fabs(g->mu_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]);
-                                                }
-                                                if(fabs(g->weights_neuron[layer][ky*n+ty][kx*m+tx])>max_wght)
-                                                {
-                                                  max_wght = fabs(g->weights_neuron[layer][ky*n+ty][kx*m+tx]);
-                                                }
                                             }
                                         }
                                     }
@@ -1695,25 +1704,25 @@ struct ConvolutionalNeuralNetwork
                                             if(n==0)
                                             {
                                                 weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx==0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                    = (fx>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
                                             }
                                             else
                                             if(n==1)
                                             {
                                                 weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx==fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                    = (fx>=fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
                                             }
                                             else
                                             if(n==2)
                                             {
                                                 weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fy==0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                    = (fy>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
                                             }
                                             else
                                             if(n==3)
                                             {
                                                 weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                    = (fx==-fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
+                                                    = (fx>=-fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
                                             }
                                             else
                                             {
@@ -1905,7 +1914,7 @@ struct ConvolutionalNeuralNetwork
         T min_final_error = 1e10;
         long live_count = 0;
 
-        long n_threads = 1;//boost::thread::hardware_concurrency();
+        long n_threads = boost::thread::hardware_concurrency();
         std::vector<std::vector<long> > vrtx(n_threads);
         for(long i=0;i<n_elements;i++)
         {
@@ -2018,6 +2027,11 @@ struct ConvolutionalNeuralNetwork
             if(stop_training)
             {
                 stop_training = false;
+                break;
+            }
+
+            if(100*error/live_count < 5)
+            {
                 break;
             }
 

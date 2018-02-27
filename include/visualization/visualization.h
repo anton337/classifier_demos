@@ -198,6 +198,8 @@ void keyboard(unsigned char Key, int x, int y)
     case 'a':change_neg_index=true;break;
     case 'w':change_up_index=true;break;
     case 's':change_down_index=true;break;
+    case 'm':scale_factor*=1.1;std::cout << scale_factor << std::endl;break;
+    case 'n':scale_factor/=1.1;std::cout << scale_factor << std::endl;break;
     case 27:
       {
         exit(1);
