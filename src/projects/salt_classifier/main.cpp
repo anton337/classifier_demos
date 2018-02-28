@@ -106,20 +106,24 @@ int main(int argc,char ** argv)
             }
             if(max_S>0.5&&min_S>0.5)
             {
-                if(n_neg<10)
+                if(n_neg<=n_pos)
+                {
+                  n_neg++;
                   out[i]=1e-5;
+                }
                 else 
                   out[i]=0;
-                n_neg++;
                 continue;
             }
             if(max_S<0.5&&min_S<0.5)
             {
-                if(n_pos<10)
+                if(n_pos<=n_neg)
+                {
+                  n_pos++;
                   out[i]=1;
+                }
                 else 
                   out[i]=0;
-                n_pos++;
                 continue;
             }
             out[i]=0;
