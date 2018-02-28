@@ -1638,6 +1638,9 @@ struct ConvolutionalNeuralNetwork
                             exit(1);
                         }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];
+                        activation_values1[layer] = new T[M*nx[layer]*ny[layer]];
+                        activation_values2[layer] = new T[M*nx[layer]*ny[layer]];
+                        activation_values3[layer] = new T[M*nx[layer]*ny[layer]];
                         break;
                     }
                 default :
@@ -1779,7 +1782,7 @@ struct ConvolutionalNeuralNetwork
                                                                        , ky[layer]                  // ny
                                                                        , 1000000000                 // lambda
                                                                        , 2*M_PI*(double)(n-2)/(N-2) // theta
-                                                                       , M_PI/2                     // phi
+                                                                       , 0                          // phi
                                                                        , kx[layer]/2                // sigma
                                                                        , 1.0                        // gamma
                                                                        );
@@ -1873,24 +1876,242 @@ struct ConvolutionalNeuralNetwork
         {
             activation_values1[0][i] = variables[i];
         }
+
+
         // forward propagation
         for(long layer = 0; layer < n_layers; layer++)
         {
-            for(long i=0;i<n_nodes[layer+1];i++)
+            switch ( n_layer_type[layer] )
             {
-                T sum = weights_bias[layer][i];
-                for(long j=0;j<n_nodes[layer];j++)
-                {
-                    sum += activation_values1[layer][j] * weights_neuron[layer][i][j];
-                }
-                activation_values1[layer+1][i] = sigmoid(sum,0);// <- zero is important here!!!!
+                case RELU_LAYER :
+                    {
+                        //for(long i=0;i<n_nodes[layer+1];i++)
+                        //{
+                        //    activation_values1[layer+1][i] = max(0.0,activation_values1[layer][i]);
+                        //}
+                        break;
+                    }
+                case FULLY_CONNECTED_LAYER :
+                    {
+                        //for(long i=0;i<n_nodes[layer+1];i++)
+                        //{
+                        //        T sum = weights_bias[layer][i];
+                        //        for(long j=0;j<n_nodes[layer];j++)
+                        //        {
+                        //            // W * y
+                        //            sum += weights_neuron[layer][i][j] * activation_values1[layer][j];
+                        //        }
+                        //        activation_values1[layer+1][i] = sigmoid(sum,0);
+                        //}
+                        break;
+                    }
+                case CONVOLUTIONAL_LAYER :
+                    {
+
+                        //************************************************************************************//
+                        //
+                        //                  _____
+                        //      Y_{k+1}     |   ||||||||||       N features
+                        //                  |   ||||||||||
+                        //                  |___||||||||||
+                        //
+                        //
+                        //
+                        //
+                        //                              M                           M
+                        //                  _________________________           _________
+                        //                  |    |                  |           |       |
+                        //                  |    | ky               |           |   b   |  N
+                        //     \        /   |____|                  |           |       |
+                        //      \  /\  /    |                       |           |_______|
+                        //       \/  \/     | kx                    |
+                        //                  |                       |  N
+                        //                  |                       |
+                        //                  |                       |
+                        //                  |                       |
+                        //                  |                       |
+                        //                  |_______________________|
+                        //
+                        //
+                        //
+                        //
+                        //
+                        //                 ________________
+                        //      Y_{k}      |        | | | |        M features
+                        //                 |        | | | |
+                        //                 |        | | | |
+                        //                 |        | | | |
+                        //                 |________|_|_|_|
+                        //
+                        //
+                        //
+                        //
+                        //
+                        //      Y_{k+1} = s ( W * Y_{k} + b )
+                        //
+                        //
+                        //
+                        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        //
+                        //      W is arranged by:
+                        //
+                        //      W[N * ky][M * kx]      // contains M * N convolution kernels
+                        //
+                        //      // row major
+                        //
+                        //      W[N * ky + y][M * kx + x]
+                        //
+                        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        //
+                        //      dx = nx - (kx/2)*2
+                        //      dy = ny - (ky/2)*2
+                        //
+                        //      b[N * (dx * dy)]      // contains N bias terms
+                        //
+                        //      // row major
+                        //
+                        //      b[(dx * dy) * n + (dx) * y + x]
+                        //
+                        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        //
+                        //      Y_{k} [M * (nx * ny)]       // contains M features from current layer
+                        //
+                        //      // row major
+                        //
+                        //      Y_{k} [(nx * ny) * m + (nx) * y + x]
+                        //
+                        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        //
+                        //      dx = nx - (kx/2)*2
+                        //      dy = ny - (ky/2)*2
+                        //
+                        //      Y_{k+1} [N * (dx * dy)]     // contains N features from next layer
+                        //
+                        //      // row major
+                        //
+                        //      Y_{k+1} [(dx * dy) * n + (dx) * y + x]
+                        //
+                        //
+                        //
+                        //************************************************************************************//
+
+                        // j : n_nodes[layer  ] = curr size = M * nx * ny
+                        // i : n_nodes[layer+1] = next size = N * dx * dy
+                        long M = n_features[layer];
+                        long N = n_features[layer+1];
+                        long Kx = kx[layer];
+                        long Ky = ky[layer];
+                        long Nx = nx[layer];
+                        long Ny = ny[layer];
+                        long wx = (Kx/2);
+                        long wy = (Ky/2);
+                        long dx = Nx - wx*2;
+                        long dy = Ny - wy*2;
+                        T factor = 1.0 / (Kx*Ky);
+
+                        {
+                            for(long n=0,i=0;n<N;n++)
+                            {
+                                for(long oy=0;oy<dy;oy++)
+                                for(long ox=0;ox<dx;ox++,i++)
+                                {
+                                    T sum = weights_bias[layer][i];
+                                    long ix = ox+wx;
+                                    long iy = oy+wy;
+                                    for(long m=0;m<M;m++)
+                                    {
+                                        for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                                        for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                        {
+                                            // W * y
+                                            sum += weights_neuron[layer][Ky*n+ty][Kx*m+tx]
+                                                 * activation_values1[layer][(Nx*Ny)*m + Nx*(iy+fy) + (ix+fx)]
+                                                 * factor;
+                                        }
+                                    }
+                                    activation_values1[layer+1][i] = sigmoid(sum,0); // arctan
+                                }
+                            }
+                        }
+                        break;
+                    }
+                case MAX_POOLING_LAYER :
+                    {
+                        // j : n_nodes[layer  ] = curr size = M * nx * ny
+                        // i : n_nodes[layer+1] = next size = N * dx * dy
+                        long M = n_features[layer];
+                        long Nx = nx[layer];
+                        long Ny = ny[layer];
+                        long factorx = pooling_factorx[layer];
+                        long factory = pooling_factory[layer];
+                        long dx = Nx / factorx;
+                        long dy = Ny / factory;
+                        T tmp_val,max_val;
+
+                        for(long m=0,i=0;m<M;m++)
+                        {
+                            for(long y=0,oy=0;y<Ny;y+=factory,oy++)
+                            for(long x=0,ox=0;x<Nx;x+=factorx,ox++)
+                            {
+                                max_val = -100000000;
+                                for(long ty=0;ty<factory;ty++)
+                                for(long tx=0;tx<factorx;tx++)
+                                {
+                                    tmp_val = activation_values1[layer][m*Ny*Nx+Nx*y+x];
+                                    if(tmp_val>max_val)
+                                    {
+                                      max_val = tmp_val;
+                                    }
+                                }
+                                activation_values1[layer+1][m*dx*dy+dx*oy+ox] = max_val;
+                            }
+                        }
+                        break;
+                    }
+                case MEAN_POOLING_LAYER :
+                    {
+                        // j : n_nodes[layer  ] = curr size = M * nx * ny
+                        // i : n_nodes[layer+1] = next size = N * dx * dy
+                        //long M = n_features[layer];
+                        //long Nx = nx[layer];
+                        //long Ny = ny[layer];
+                        //long factorx = pooling_factorx[layer];
+                        //long factory = pooling_factory[layer];
+                        //long dx = Nx / factorx;
+                        //long dy = Ny / factory;
+                        //T tmp_val,mean_val;
+                        //T factor = 1.0 / (factorx * factory);
+
+                        //for(long m=0,i=0;m<M;m++)
+                        //{
+                        //    for(long y=0,oy=0;y<Ny;y+=factory,oy++)
+                        //    for(long x=0,ox=0;x<Nx;x+=factorx,ox++)
+                        //    {
+                        //        mean_val = 0;
+                        //        for(long ty=0;ty<factory;ty++)
+                        //        for(long tx=0;tx<factorx;tx++)
+                        //        {
+                        //            mean_val += activation_values1[layer][m*Ny*Nx+Nx*y+x];
+                        //        }
+                        //        activation_values1[layer+1][m*dx*dy+dx*oy+ox] = mean_val * factor;
+                        //    }
+                        //}
+                        break;
+                    }
+                default :
+                    {
+                        std::cout << "1. Layer type not defined." << std::endl;
+                        exit(1);
+                    }
             }
         }
-        long last_layer = n_nodes.size()-2;
-        for(long i=0;i<n_labels;i++)
-        {
-            labels[i] = activation_values1[last_layer][i];
-        }
+
+
+        //long last_layer = n_nodes.size()-2;
+        //for(long i=0;i<n_labels;i++)
+        //{
+        //    labels[i] = activation_values1[last_layer][i];
+        //}
         return labels;
     }
 

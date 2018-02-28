@@ -9,10 +9,11 @@
 #include "visualize_rbm_reconstruction.h"
 #include "visualize_activation_probe.h"
 #include "visualize_cnn_activation_probe.h"
+#include "visualize_cnn_convolution_probe.h"
 
-bool change_pos_index = false;
-bool change_neg_index = false;
-bool change_up_index = false;
+bool change_pos_index  = false;
+bool change_neg_index  = false;
+bool change_up_index   = false;
 bool change_down_index = false;
 
 std::vector < Display < double > * > displays;

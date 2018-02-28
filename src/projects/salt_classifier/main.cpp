@@ -23,6 +23,15 @@ double * out = NULL;
 
 long nsamp = 0;
 
+void model_cnn()
+{
+    while(true)
+    {
+      model -> model(nx*ny,1,&D[viz_in_dat->viz_selection*nx*ny]);
+      usleep(10000);
+    }
+}
+
 void train_cnn()
 {
       model -> train(0,.1,1000000000000000,nsamp,nx*ny,1,D,out);
@@ -279,18 +288,34 @@ int main(int argc,char ** argv)
         VisualizeCNNActivationProbe < double > * viz_cnn_activation0 = NULL;
         viz_cnn_activation0 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 0 )
-                                                                         , 0.0 , 0.25
+                                                                         , 0.0 , 0.125
                                                                          ,-1 , 1
                                                                          );
         addDisplay ( viz_cnn_activation0 );
 
+        VisualizeCNNConvolutionProbe < double > * viz_cnn_convolution0 = NULL;
+        viz_cnn_convolution0 = new VisualizeCNNConvolutionProbe< double >( model
+                                                                         , new CNNConvolutionProbe < double > ( model , 0 )
+                                                                         , 0.125 , 0.25
+                                                                         ,-1 , 1
+                                                                         );
+        addDisplay ( viz_cnn_convolution0 );
+
         VisualizeCNNActivationProbe < double > * viz_cnn_activation2 = NULL;
         viz_cnn_activation2 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 2 )
-                                                                         , 0.25 , 0.5
+                                                                         , 0.25 , 0.375
                                                                          ,-1 , 1
                                                                          );
         addDisplay ( viz_cnn_activation2 );
+
+        VisualizeCNNConvolutionProbe < double > * viz_cnn_convolution2 = NULL;
+        viz_cnn_convolution2 = new VisualizeCNNConvolutionProbe< double >( model
+                                                                         , new CNNConvolutionProbe < double > ( model , 2 )
+                                                                         , 0.375 , 0.5
+                                                                         ,-1 , 1
+                                                                         );
+        addDisplay ( viz_cnn_convolution2 );
 
         VisualizeCNNActivationProbe < double > * viz_cnn_activation5 = NULL;
         viz_cnn_activation5 = new VisualizeCNNActivationProbe < double > ( model
@@ -318,6 +343,8 @@ int main(int argc,char ** argv)
     }
 
     new boost::thread(train_cnn);
+
+    new boost::thread(model_cnn);
 
     // start graphics
     startGraphics(argc,argv,"Salt Segmentation Example");
