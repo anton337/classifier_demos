@@ -25,7 +25,7 @@ long nsamp = 0;
 
 void train_cnn()
 {
-      model -> train(0,.1,10000,nsamp,nx*ny,1,D,out);
+      model -> train(0,.1,1000000000000000,nsamp,nx*ny,1,D,out);
 }
 
 int main(int argc,char ** argv)
@@ -122,11 +122,11 @@ int main(int argc,char ** argv)
         /* 0 */ nodes.push_back(nx*ny);
         /* 1 */ nodes.push_back(14112);
         /* 2 */ nodes.push_back(3528); 
-        /* 3 */ nodes.push_back(4096);
-        /* 4 */ nodes.push_back(1024);
-        /* 5 */ nodes.push_back(1024);
-        /* 7 */ nodes.push_back(256);   
-        /* 8 */ nodes.push_back(64); 
+        /* 3 */ nodes.push_back(768);
+        /* 4 */ nodes.push_back(192);
+        /* 5 */ nodes.push_back(192);
+        /* 7 */ nodes.push_back(64);   
+        /* 8 */ nodes.push_back(16); 
         /*   */ nodes.push_back(1);    
         /*   */ nodes.push_back(1);    
         std::vector<LayerType> layer_type;          
@@ -162,9 +162,9 @@ int main(int argc,char ** argv)
         features.push_back(1);
         features.push_back(18);
         features.push_back(18);
-        features.push_back(64);
-        features.push_back(64);
-        features.push_back(64);
+        features.push_back(12);
+        features.push_back(12);
+        features.push_back(12);
         features.push_back(1);
         features.push_back(1);
         features.push_back(1);
@@ -295,10 +295,10 @@ int main(int argc,char ** argv)
         VisualizeCNNActivationProbe < double > * viz_cnn_activation5 = NULL;
         viz_cnn_activation5 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 5 )
-                                                                         , 32 // in_nx
-                                                                         , 16 // out_nx
-                                                                         , 32 // in_ny
-                                                                         , 16 // out_ny
+                                                                         , 12 // in_nx
+                                                                         , 8  // out_nx
+                                                                         , 16 // in_ny
+                                                                         , 8  // out_ny
                                                                          , 0.5 , 0.75
                                                                          ,-1 , 1
                                                                          );
@@ -307,10 +307,10 @@ int main(int argc,char ** argv)
         VisualizeCNNActivationProbe < double > * viz_cnn_activation6 = NULL;
         viz_cnn_activation6 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 6 )
-                                                                         , 16 // in_nx
-                                                                         , 8  // out_nx
-                                                                         , 16 // in_ny
-                                                                         , 8  // out_ny
+                                                                         , 8  // in_nx
+                                                                         , 4  // out_nx
+                                                                         , 8  // in_ny
+                                                                         , 4  // out_ny
                                                                          , 0.75 , 1
                                                                          ,-1 , 1
                                                                          );
