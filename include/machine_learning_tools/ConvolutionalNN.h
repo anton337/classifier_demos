@@ -1752,13 +1752,15 @@ struct ConvolutionalNeuralNetwork
                                     {
                                         for(long n=0;n<N;n++)
                                         {
-                                            T * gab = Gabor < double > ( kx[layer]          // nx
-                                                                       , ky[layer]          // ny
-                                                                       , kx[layer]          // lambda
-                                                                       , 2*M_PI*(double)n/N // theta
-                                                                       , M_PI/2             // phi
-                                                                       , kx[layer]          // sigma
-                                                                       , 1.0                // gamma
+                                          if(n==0)
+                                          {
+                                            T * gab = Gabor < double > ( kx[layer]                  // nx
+                                                                       , ky[layer]                  // ny
+                                                                       , 1000000000                 // lambda
+                                                                       , 2*M_PI*(double)(n-2)/(N-2) // theta
+                                                                       , 0                          // phi
+                                                                       , kx[layer]/2                // sigma
+                                                                       , 1.0                        // gamma
                                                                        );
                                             for(long fy=-wy,ty=0,t=0;fy<=wy;fy++,ty++)
                                             for(long fx=-wx,tx=0;fx<=wx;fx++,tx++,t++)
@@ -1769,6 +1771,50 @@ struct ConvolutionalNeuralNetwork
                                                 }
                                             }
                                             delete [] gab;
+                                          }
+                                          else
+                                          if(n==1)
+                                          {
+                                            T * gab = Gabor < double > ( kx[layer]                  // nx
+                                                                       , ky[layer]                  // ny
+                                                                       , 1000000000                 // lambda
+                                                                       , 2*M_PI*(double)(n-2)/(N-2) // theta
+                                                                       , M_PI/2                     // phi
+                                                                       , kx[layer]/2                // sigma
+                                                                       , 1.0                        // gamma
+                                                                       );
+                                            for(long fy=-wy,ty=0,t=0;fy<=wy;fy++,ty++)
+                                            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++,t++)
+                                            {
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = -gab[t];
+                                                }
+                                            }
+                                            delete [] gab;
+                                          }
+                                          else
+                                          {
+                                            int J=(2*(n-2)<(N-2))?0:1;
+                                            int I=(4*(n-2)<(N-2))?-1:1;
+                                            T * gab = Gabor < double > ( kx[layer]                  // nx
+                                                                       , ky[layer]                  // ny
+                                                                       , kx[layer]                  // lambda
+                                                                       , 4*M_PI*(double)(n-2)/(N-2) // theta
+                                                                       , J*M_PI/2                   // phi
+                                                                       , kx[layer]/2                // sigma
+                                                                       , 1.0                        // gamma
+                                                                       );
+                                            for(long fy=-wy,ty=0,t=0;fy<=wy;fy++,ty++)
+                                            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++,t++)
+                                            {
+                                                {
+                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
+                                                        = (J==1)?gab[t]:I*gab[t];
+                                                }
+                                            }
+                                            delete [] gab;
+                                          }
                                         }
                                     }
                                 }
@@ -1783,30 +1829,6 @@ struct ConvolutionalNeuralNetwork
                                             for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
                                             for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
                                             {
-                                                if(n==0)
-                                                {
-                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                        = (fx>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                                }
-                                                else
-                                                if(n==1)
-                                                {
-                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                        = (fx>=fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                                }
-                                                else
-                                                if(n==2)
-                                                {
-                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                        = (fy>=0)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                                }
-                                                else
-                                                if(n==3)
-                                                {
-                                                    weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
-                                                        = (fx>=-fy)?1:0.05*(-1+2*((rand()%10000)/10000.0));
-                                                }
-                                                else
                                                 {
                                                     weights_neuron[layer][ky[layer]*n+ty][kx[layer]*m+tx]
                                                         = (fx==0&&fy==0)?1:0.5*(-1+2*((rand()%10000)/10000.0));
