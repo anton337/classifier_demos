@@ -41,6 +41,7 @@ struct cnn_training_info
     quasi_newton_info<T> * quasi_newton;
 
     std::vector<long> n_nodes;
+    std::vector<bool> n_locked;
     std::vector<LayerType> n_layer_type;
     std::vector<ActivationType> n_activation_type;
     std::vector<long> n_features;
@@ -740,7 +741,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long oy=0;oy<dy;oy++)
                                     for(long ox=0;ox<dx;ox++,i++)
                                     {
-                                        T sum = g->weights_bias[layer][i];
+                                        T sum = 0;//g->weights_bias[layer][i];
                                         long ix = ox+wx;
                                         long iy = oy+wy;
                                         for(long m=0;m<M;m++)
@@ -754,7 +755,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                      * factor;
                                             }
                                         }
-                                        g->activation_values[layer+1][i] = sigmoid(sum,0); // arctan
+                                        g->activation_values[layer+1][i] = sigmoid(sum,2); // arctan
                                         //std::cout << g->activation_values[layer+1][i] << "  ";
                                         //std::cout << sum << "  ";
                                         //if(i%dx==0)std::cout << std::endl;
@@ -978,12 +979,13 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                               g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]
                                                             )
                                                             // W
+                                                            //* g->weights_neuron[layer+1][ky*n+(ky-1-ty)][kx*m+(kx-1-tx)] 
                                                             * g->weights_neuron[layer+1][ky*n+ty][kx*m+tx] 
                                                             ;
                                                     }
                                                 }
                                             }
-                                            g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],0);
+                                            g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],2);
                                         }
                                     }
                                 }
@@ -1083,7 +1085,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case CONVOLUTIONAL_LAYER :
                         {
-                            if(layer>0)
+                            if(g->n_locked[layer] == false)
                             {
                                 long M = g->n_features[layer];
                                 long N = g->n_features[layer+1];
@@ -1148,7 +1150,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case CONVOLUTIONAL_LAYER :
                         {
-                            if(layer>0)
+                            if(g->n_locked[layer] == false)
                             {
                                 long M = g->n_features[layer];
                                 long N = g->n_features[layer+1];
@@ -1206,8 +1208,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                                               * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
                                                             ) * fact
                                                             ;
-                                                    sum_deltas += g->deltas[layer+1][(dx*dy)*n + dx*vy + vx];
-                                                    sum_activation += g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                                                    //sum_deltas += g->deltas[layer+1][(dx*dy)*n + dx*vy + vx];
+                                                    //sum_activation += g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
                                                 }
                                             }
                                         }
@@ -1417,6 +1419,7 @@ struct ConvolutionalNeuralNetwork
     long n_outputs;
     long n_layers;
     std::vector<long> n_nodes;
+    std::vector<bool> n_locked;
     std::vector<LayerType> n_layer_type;
     std::vector<ActivationType> n_activation_type;
     std::vector<long> n_features;
@@ -1487,6 +1490,7 @@ struct ConvolutionalNeuralNetwork
     int sigmoid_type;
 
     ConvolutionalNeuralNetwork ( std::vector <      long      > p_nodes 
+                               , std::vector <      bool      > p_locked
                                , std::vector <      LayerType > p_layer_type
                                , std::vector < ActivationType > p_activation_type
                                , std::vector <      long      > p_features
@@ -1511,6 +1515,7 @@ struct ConvolutionalNeuralNetwork
         perror = 1e10;
 
                   n_nodes =           p_nodes;
+                 n_locked =          p_locked;
              n_layer_type =      p_layer_type;
         n_activation_type = p_activation_type;
                n_features =        p_features;
@@ -2015,7 +2020,7 @@ struct ConvolutionalNeuralNetwork
                                 for(long oy=0;oy<dy;oy++)
                                 for(long ox=0;ox<dx;ox++,i++)
                                 {
-                                    T sum = weights_bias[layer][i];
+                                    T sum = 0;//weights_bias[layer][i];
                                     long ix = ox+wx;
                                     long iy = oy+wy;
                                     for(long m=0;m<M;m++)
@@ -2263,6 +2268,7 @@ struct ConvolutionalNeuralNetwork
         {
           g[thread]->quasi_newton       = quasi_newton;
           g[thread]->n_nodes            = n_nodes;
+          g[thread]->n_locked           = n_locked;
           g[thread]->n_layer_type       = n_layer_type;
           g[thread]->n_activation_type  = n_activation_type;
           g[thread]->n_features         = n_features;

@@ -91,27 +91,39 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
   for(long t=0;t<vrtx.size();t++)
   {
     long k = vrtx[t];
-    for(long i=0;i<g->v;i++)
+    long wy = Ky/2;
+    long wx = Kx/2;
+    long h = dx*dy;
+    long v = nx*ny;
+    // dW       [kx x ky]
+    // vis      [nx x ny]
+    // hid      [dx x dy]
+    for(long iy=wy;iy+wy<ny;iy++)
+    for(long ix=wx;ix+wx<nx;ix++)
+    for(long ky=-wy,i=0;ky<=wy;ky++)
+    for(long kx=-wx;kx<=wx;kx++,i++)
     {
-      for(long j=0;j<g->h;j++)
-      {
-        g->partial_dW[i*g->h+j] -= factor * (g->vis0[k*g->v+i]*g->hid0[k*g->h+j] - g->vis[k*g->v+i]*g->hid[k*g->h+j]);
-      }
+      long oy = iy+ky;
+      long ox = ix+kx;
+      g->partial_dW[i] -= factor * (g->vis0[k*v+iy*nx+ix]*g->hid0[k*h+oy*dx+ox] - g->vis[k*v+iy*nx+ix]*g->hid[k*h+oy*dx+ox]);
     }
 
-    for(long j=0;j<g->h;j++)
+    for(long oy=0,j=0;oy<dy;oy++)
+    for(long ox=0;ox<dx;ox++,j++)
     {
-      g->partial_dc[j] -= factor * (g->hid0[k*g->h+j]*g->hid0[k*g->h+j] - g->hid[k*g->h+j]*g->hid[k*g->h+j]);
+      g->partial_dc[j] -= factor * (g->hid0[k*h+j]*g->hid0[k*h+j] - g->hid[k*h+j]*g->hid[k*h+j]);
     }
 
-    for(long i=0;i<g->v;i++)
+    for(long iy=0,i=0;iy<ny;oy++)
+    for(long ix=0;ix<nx;ix++,i++)
     {
-      g->partial_db[i] -= factor * (g->vis0[k*g->v+i]*g->vis0[k*g->v+i] - g->vis[k*g->v+i]*g->vis[k*g->v+i]);
+      g->partial_db[i] -= factor * (g->vis0[k*v+i]*g->vis0[k*v+i] - g->vis[k*v+i]*g->vis[k*v+i]);
     }
 
-    for(long i=0;i<g->v;i++)
+    for(long iy=0,i=0;iy<ny;oy++)
+    for(long ix=0;ix<nx;ix++,i++)
     {
-      g->partial_err += factorv * (g->vis0[k*g->v+i]-g->vis[k*g->v+i])*(g->vis0[k*g->v+i]-g->vis[k*g->v+i]);
+      g->partial_err += factorv * (g->vis0[k*v+i]-g->vis[k*v+i])*(g->vis0[k*v+i]-g->vis[k*v+i]);
     }
   }
 }
@@ -132,21 +144,43 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
 //      |                   |                       |_______________|                        //
 //      |___________________|                                                                //
 //                                                                                           //
+//      kx should be odd                                                                     //
+//                                                                                           //
+//      dx = nx - 2*(kx/2) <- integer division                                               //
 //                                                                                           //
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-void vis2hid_worker(const T * X,T * H,long h,long v,T * c,T * W,std::vector<long> const & vrtx)
+void vis2hid_worker ( const T   * X     // [nx x ny]
+                    ,       T   * H     // [dx x dy]
+                    , long        nx
+                    , long        ny
+                    , long        Kx
+                    , long        Ky
+                    , long        dx
+                    , long        dy
+                    ,       T   * c     // [dx x dy]
+                    ,       T   * W     // [kx x ky]
+                    , std::vector<long> const & vrtx
+                    )
 {
   for(long t=0;t<vrtx.size();t++)
   {
+    long wx = Kx/2;
+    long wy = Ky/2;
     long k = vrtx[t];
-    for(long j=0;j<h;j++)
+    long h = dx*dy;
+    long v = nx*ny;
+    for(long oy=0,j=0;oy<dy;oy++)
+    for(long ox=0;ox<dx;ox++,j++)
     {
       H[k*h+j] = c[j]; 
-      for(long i=0;i<v;i++)
+      for(long ky=-wy,i=0;ky<=wy;ky++)
+      for(long kx=-wx;kx<=wx;kx++,i++)
       {
-        H[k*h+j] += W[i*h+j] * X[k*v+i];
+        long iy=oy+wy+ky;
+        long ix=ox+wx+kx;
+        H[k*h+j] += W[i] * X[k*v+nx*iy+ix];
       }
       H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
     }
@@ -173,19 +207,49 @@ void vis2hid_worker(const T * X,T * H,long h,long v,T * c,T * W,std::vector<long
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-void hid2vis_worker(const T * H,T * V,long h,long v,T * b,T * W,std::vector<long> const & vrtx)
+void hid2vis_worker ( const T   * H     // [dx x dy]
+                    ,       T   * V     // [nx x ny]
+                    , long        nx
+                    , long        ny
+                    , long        Kx
+                    , long        Ky
+                    , long        dx
+                    , long        dy
+                    ,       T   * b     // [nx x ny]
+                    ,       T   * W     // [kx x ky]
+                    , std::vector<long> const & vrtx
+                    )
 {
   for(long t=0;t<vrtx.size();t++)
   {
+    long wx = Kx/2;
+    long wy = Ky/2;
     long k = vrtx[t];
-    for(long i=0;i<v;i++)
+    long h = dx*dy;
+    long v = nx*ny;
+    for(long iy=0,i=0;iy<ny;iy++)
+    for(long ix=0;ix<nx;ix++,i++)
     {
-      V[k*v+i] = b[i]; 
-      for(long j=0;j<h;j++)
+      if ( ix      >= 2*wx 
+        && ix+2*wx <  nx
+        && iy      >= 2*wy
+        && iy+2*wy <  ny
+         )
       {
-        V[k*v+i] += W[i*h+j] * H[k*h+j];
+        V[k*v+i] = b[i];
+        for(long ky=-wy,fy=2*wy;ky<=wy;ky++,fy--)
+        for(long kx=-wx,fx=2*wx;kx<=wx;kx++,fx--)
+        {
+          long oy=iy-wy+ky;
+          long ox=ix-wx+kx;
+          V[k*v+i] += W[Kx*fy+fx] * H[k*h+dx*oy+ox]; // W is flipped here!
+        }
+        V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
       }
-      V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
+      else
+      {
+        // do nothing, keep original values of V
+      }
     }
   }
 }
@@ -288,9 +352,9 @@ struct RBM
     boost::posix_time::ptime time_0(boost::posix_time::microsec_clock::local_time());
     //std::cout << "cd" << std::endl;
 
-    // CD Contrastive divergence (Hlongon's CD(k))
+    // CD Contrastive divergence (Hinton's CD(k))
     //   [dW, db, dc, act] = cd(self, X) returns the gradients of
-    //   the weihgts, visible and hidden biases using Hlongon's
+    //   the weihgts, visible and hidden biases using Hinton's
     //   approximated CD. The sum of the average hidden units
     //   activity is returned in act as well.
 

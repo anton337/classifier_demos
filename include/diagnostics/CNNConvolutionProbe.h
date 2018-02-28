@@ -198,7 +198,7 @@ struct CNNConvolutionProbe
                       for(long oy=0;oy<dy;oy++)
                       for(long ox=0;ox<dx;ox++,i++)
                       {
-                          T sum = cnn->weights_bias[layer][i];
+                          T sum = 0;//cnn->weights_bias[layer][i];
                           long ix = ox+wx;
                           long iy = oy+wy;
                           for(long m=0;m<M;m++)
