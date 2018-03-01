@@ -133,20 +133,20 @@ int main(int argc,char ** argv)
 
         std::vector<long> nodes;
         /* 0 */ nodes.push_back(nx*ny);
-        /* 1 */ nodes.push_back(12168);
-        /* 2 */ nodes.push_back(7200); 
-        /* 3 */ nodes.push_back(3136);
-        /* 4 */ nodes.push_back(1024);
-        /* 5 */ nodes.push_back(1024);
-        /* 7 */ nodes.push_back(256);   
+        /* 1 */ nodes.push_back(14112);
+        /* 2 */ nodes.push_back(3528); 
+        /* 3 */ nodes.push_back(1800);
+        /* 4 */ nodes.push_back(450);
+        /* 5 */ nodes.push_back(450);
+        /* 7 */ nodes.push_back(144);   
         /* 8 */ nodes.push_back(64); 
         /*   */ nodes.push_back(1);    
         /*   */ nodes.push_back(1);    
         std::vector<LayerType> layer_type;          
         layer_type.push_back(CONVOLUTIONAL_LAYER);  //0
-        layer_type.push_back(CONVOLUTIONAL_LAYER);  //1
+        layer_type.push_back(MAX_POOLING_LAYER);    //1
         layer_type.push_back(CONVOLUTIONAL_LAYER);  //2
-        layer_type.push_back(CONVOLUTIONAL_LAYER);  //3
+        layer_type.push_back(MAX_POOLING_LAYER);    //3
         layer_type.push_back(RELU_LAYER);           //4
         layer_type.push_back(FULLY_CONNECTED_LAYER);//5
         layer_type.push_back(FULLY_CONNECTED_LAYER);//6
@@ -172,7 +172,7 @@ int main(int argc,char ** argv)
         activation_type.push_back(LOGISTIC);
         activation_type.push_back(LOGISTIC);
         std::vector<bool> locked;
-        locked.push_back(false);
+        locked.push_back(true);
         locked.push_back(false);
         locked.push_back(false);
         locked.push_back(false);
@@ -186,52 +186,52 @@ int main(int argc,char ** argv)
         features.push_back(1);
         features.push_back(18);
         features.push_back(18);
-        features.push_back(16);
-        features.push_back(16);
-        features.push_back(16);
+        features.push_back(18);
+        features.push_back(18);
+        features.push_back(18);
         features.push_back(1);
         features.push_back(1);
         features.push_back(1);
         features.push_back(1);
         std::vector<long> layer_kx;
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
-        layer_kx.push_back(7);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
+        layer_kx.push_back(5);
         std::vector<long> layer_ky;
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
-        layer_ky.push_back(7);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
+        layer_ky.push_back(5);
         std::vector<long> layer_nx;
         layer_nx.push_back(nx);
-        layer_nx.push_back(26);
-        layer_nx.push_back(20);
+        layer_nx.push_back(28);
         layer_nx.push_back(14);
-        layer_nx.push_back(8);
-        layer_nx.push_back(8);
+        layer_nx.push_back(10);
+        layer_nx.push_back(5);
+        layer_nx.push_back(5);
         layer_nx.push_back(3);
         layer_nx.push_back(nx-14);
         layer_nx.push_back(nx-16);
@@ -242,11 +242,11 @@ int main(int argc,char ** argv)
         layer_nx.push_back(nx);
         std::vector<long> layer_ny;
         layer_ny.push_back(ny);
-        layer_ny.push_back(26);
-        layer_ny.push_back(20);
+        layer_ny.push_back(28);
         layer_ny.push_back(14);
-        layer_ny.push_back(8);
-        layer_ny.push_back(8);
+        layer_ny.push_back(10);
+        layer_ny.push_back(5);
+        layer_ny.push_back(5);
         layer_ny.push_back(3);
         layer_ny.push_back(ny-14);
         layer_ny.push_back(ny-16);
@@ -304,42 +304,26 @@ int main(int argc,char ** argv)
         VisualizeCNNConvolutionProbe < double > * viz_cnn_activation0 = NULL;
         viz_cnn_activation0 = new VisualizeCNNConvolutionProbe < double > ( model
                                                                          , new CNNConvolutionProbe < double > ( model , 0 )
-                                                                         , 0.0 , 0.125
+                                                                         , 0.0 , 0.25
                                                                          ,-1 , 1
                                                                          );
         addDisplay ( viz_cnn_activation0 );
 
-        VisualizeCNNConvolutionProbe < double > * viz_cnn_activation1 = NULL;
-        viz_cnn_activation1 = new VisualizeCNNConvolutionProbe < double > ( model
-                                                                         , new CNNConvolutionProbe < double > ( model , 1 )
-                                                                         , 0.125 , 0.25
-                                                                         ,-1 , 1
-                                                                         );
-        addDisplay ( viz_cnn_activation1 );
-
         VisualizeCNNConvolutionProbe < double > * viz_cnn_activation2 = NULL;
         viz_cnn_activation2 = new VisualizeCNNConvolutionProbe < double > ( model
                                                                          , new CNNConvolutionProbe < double > ( model , 2 )
-                                                                         , 0.25 , 0.375
+                                                                         , 0.25 , 0.5
                                                                          ,-1 , 1
                                                                          );
         addDisplay ( viz_cnn_activation2 );
 
-        VisualizeCNNConvolutionProbe < double > * viz_cnn_activation3 = NULL;
-        viz_cnn_activation3 = new VisualizeCNNConvolutionProbe < double > ( model
-                                                                         , new CNNConvolutionProbe < double > ( model , 3 )
-                                                                         , 0.375 , 0.5
-                                                                         ,-1 , 1
-                                                                         );
-        addDisplay ( viz_cnn_activation3 );
-
         VisualizeCNNActivationProbe < double > * viz_cnn_activation5 = NULL;
         viz_cnn_activation5 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 5 )
-                                                                         , 32 // in_nx
-                                                                         , 16 // out_nx
-                                                                         , 32 // in_ny
-                                                                         , 16 // out_ny
+                                                                         , 25 // in_nx
+                                                                         , 12 // out_nx
+                                                                         , 18 // in_ny
+                                                                         , 12 // out_ny
                                                                          , 0.5 , 0.75
                                                                          ,-1 , 1
                                                                          );
@@ -348,9 +332,9 @@ int main(int argc,char ** argv)
         VisualizeCNNActivationProbe < double > * viz_cnn_activation6 = NULL;
         viz_cnn_activation6 = new VisualizeCNNActivationProbe < double > ( model
                                                                          , new CNNActivationProbe < double > ( model , 6 )
-                                                                         , 16 // in_nx
+                                                                         , 12 // in_nx
                                                                          , 8  // out_nx
-                                                                         , 16 // in_ny
+                                                                         , 12 // in_ny
                                                                          , 8  // out_ny
                                                                          , 0.75 , 1
                                                                          ,-1 , 1

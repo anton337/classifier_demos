@@ -8,7 +8,8 @@
 #export PROJECT=convolutional_neural_network
 #export PROJECT=sep_classifier
 #export PROJECT=cifar_classifier
-export PROJECT=salt_classifier
+#export PROJECT=salt_classifier
+export PROJECT=convolutional_rbm
 
 ./clean.sh
 

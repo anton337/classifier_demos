@@ -1,0 +1,12 @@
+Project home: /home/antonk/classifier_demos/classifier_demos
+Project: convolutional_rbm
+find /home/antonk/classifier_demos/classifier_demos/obj/ -name "*.o" | xargs rm -f
+rm -f /home/antonk/classifier_demos/classifier_demos/bin/convolutional_rbm/demo.bin
+Project home: /home/antonk/classifier_demos/classifier_demos
+Project: convolutional_rbm
+g++ -O0 -g3 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -c /home/antonk/classifier_demos/classifier_demos/src//diagnostics/Histogram.cpp -o /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o
+g++ -O0 -g3 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -c /home/antonk/classifier_demos/classifier_demos/src//file_input/readBMP.cpp -o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o
+g++ -O0 -g3 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools /home/antonk/classifier_demos/classifier_demos/src/projects/convolutional_rbm/main.cpp /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o -o /home/antonk/classifier_demos/classifier_demos/bin/convolutional_rbm/demo.bin -lglut -lGL -lGLU -lboost_system -lboost_thread
+Project home: /home/antonk/classifier_demos/classifier_demos
+Running project convolutional_rbm
+Convolutional RBM Test.
