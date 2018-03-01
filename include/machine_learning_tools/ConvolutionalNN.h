@@ -1392,7 +1392,7 @@ T * Gabor ( long nx
     for(long y=-wy;y<=wy;y++,k++)
     {
         double X = x*cos(theta) + y*sin(theta);
-        double Y = y*sin(theta) - x*cos(theta);
+        double Y = y*cos(theta) - x*sin(theta);
         out[k] = exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
     }
     return out;

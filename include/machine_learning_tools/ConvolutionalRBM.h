@@ -106,39 +106,48 @@ struct gradient_info
 template<typename T>
 void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
 {
-  T factor = 1.0f / g->n;
-  T factorv= 1.0f / (g->v*g->v);
+  long Ky = g->ky;
+  long Kx = g->kx;
+  long ny = g->ny;
+  long nx = g->nx;
+  long dy = g->dy;
+  long dx = g->dx;
+  long K = g->K;
+  long wy = Ky/2;
+  long wx = Kx/2;
+  long h = K*dx*dy;
+  long v = nx*ny;
+  T factor = 1.0f / (g->n*dx*dy);
+  T factorb= 1.0f / (g->n*nx*ny);
+  T factorv= 1.0f / (g->v);
   
   for(long t=0;t<vrtx.size();t++)
   {
     long k = vrtx[t];
-    long Ky = g->ky;
-    long Kx = g->kx;
-    long ny = g->ny;
-    long nx = g->nx;
-    long dy = g->dy;
-    long dx = g->dx;
-    long K = g->K;
-    long wy = Ky/2;
-    long wx = Kx/2;
-    long h = K*dx*dy;
-    long v = nx*ny;
     // dW       [K x kx x ky]
     // vis      [nx x ny]
     // hid      [K x dx x dy]
     for(long z=0;z<K;z++)
-    for(long oy=0;oy<dy;oy++)
-    for(long ox=0;ox<dx;ox++)
-    for(long ky=-wy,i=0;ky<=wy;ky++)
-    for(long kx=-wx;kx<=wx;kx++,i++)
     {
-      long iy = oy+wy+wy-ky;
-      long ix = ox+wx+wx-kx;
-      //long iy = oy+wy+ky;
-      //long ix = ox+wx+kx;
-      // flipped here
-      //g->partial_dW[z*Kx*Ky+i] -= factor * (g->vis0[k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
-      g->partial_dW[z*Kx*Ky+i] -= factor * (g->vis0[k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
+        T sum = 0;
+        for(long oy=0;oy<dy;oy++)
+        for(long ox=0;ox<dx;ox++)
+        for(long ky=-wy,i=0;ky<=wy;ky++)
+        for(long kx=-wx;kx<=wx;kx++,i++)
+        {
+          //long iy = oy+wy+wy-ky;
+          //long ix = ox+wx+wx-kx;
+          long iy = oy+wy+ky;
+          long ix = ox+wx+kx;
+          // flipped here
+          g->partial_dW[z*Kx*Ky+i] -= factor * (g->vis0[k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
+          //sum += fabs(g->partial_dW[z*Kx*Ky+i]);
+        }
+        //for(long ky=-wy,i=0;ky<=wy;ky++)
+        //for(long kx=-wx;kx<=wx;kx++,i++)
+        //{
+        //  //g->partial_dW[z*Kx*Ky+i] /= sum;
+        //}
     }
 
     for(long z=0;z<K;z++)
@@ -151,13 +160,13 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
     for(long iy=0,i=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
-      g->partial_db[i] -= factor * (g->vis0[k*v+i]*g->vis0[k*v+i] - g->vis[k*v+i]*g->vis[k*v+i]);
+      g->partial_db[i] -= factorb * (g->vis0[k*v+i]*g->vis0[k*v+i] - g->vis[k*v+i]*g->vis[k*v+i]);
     }
 
     for(long iy=0,i=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
-      g->partial_err += factorv * (g->vis0[k*v+i]-g->vis[k*v+i])*(g->vis0[k*v+i]-g->vis[k*v+i]);
+      g->partial_err += factorv * fabs(g->vis0[k*v+i]-g->vis[k*v+i]);
     }
     
   }
@@ -207,43 +216,47 @@ void vis2hid_worker ( worker_dat<T> * g
                     , std::vector<long> const & vrtx
                     )
 {
+  long nx = g->nx;
+  long ny = g->ny;
+  long Kx = g->kx;
+  long Ky = g->ky;
+  long dx = g->dx;
+  long dy = g->dy;
+  long K = g->K;
+  long wx = Kx/2;
+  long wy = Ky/2;
+  long h = K*dx*dy;
+  long v = nx*ny;
+  //T * sum = new T[K];
   for(long t=0;t<vrtx.size();t++)
   {
-    long nx = g->nx;
-    long ny = g->ny;
-    long Kx = g->kx;
-    long Ky = g->ky;
-    long dx = g->dx;
-    long dy = g->dy;
-    long K = g->K;
-    long wx = Kx/2;
-    long wy = Ky/2;
     long k = vrtx[t];
-    long h = K*dx*dy;
-    long v = nx*ny;
-    T sum = 0;
     for(long z=0,j=0;z<K;z++)
-    for(long oy=0;oy<dy;oy++)
-    for(long ox=0;ox<dx;ox++,j++)
     {
-      H[k*h+j] = c[j]; 
-      for(long ky=-wy,i=0;ky<=wy;ky++)
-      for(long kx=-wx;kx<=wx;kx++,i++)
+      //sum[z] = 0;
+      for(long oy=0;oy<dy;oy++)
+      for(long ox=0;ox<dx;ox++,j++)
       {
-        long iy=oy+wy+ky;
-        long ix=ox+wx+kx;
-        H[k*h+j] += W[z*Kx*Ky+i] * X[k*v+nx*iy+ix];
+        H[k*h+j] = c[j]; 
+        for(long ky=-wy,i=0;ky<=wy;ky++)
+        for(long kx=-wx;kx<=wx;kx++,i++)
+        {
+          long iy=oy+wy+ky;
+          long ix=ox+wx+kx;
+          H[k*h+j] += W[z*Kx*Ky+i] * X[k*v+nx*iy+ix];
+        }
+        H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
+        //sum[z] += H[k*h+j];
       }
-      H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
-      sum += H[k*h+j];
     }
-    for(long z=0,j=0;z<K;z++)
-    for(long oy=0;oy<dy;oy++)
-    for(long ox=0;ox<dx;ox++,j++)
-    {
-      H[k*h+j] /= sum;
-    }
+    //for(long z=0,j=0;z<K;z++)
+    //for(long oy=0;oy<dy;oy++)
+    //for(long ox=0;ox<dx;ox++,j++)
+    //{
+    //  H[k*h+j] /= sum[z];
+    //}
   }
+  //delete [] sum;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -274,20 +287,20 @@ void hid2vis_worker ( worker_dat<T> * g
                     , std::vector<long> const & vrtx
                     )
 {
+  long nx = g->nx;
+  long ny = g->ny;
+  long Kx = g->kx;
+  long Ky = g->ky;
+  long dx = g->dx;
+  long dy = g->dy;
+  long K = g->K;
+  long wx = Kx/2;
+  long wy = Ky/2;
+  long h = K*dx*dy;
+  long v = nx*ny;
   for(long t=0;t<vrtx.size();t++)
   {
-    long nx = g->nx;
-    long ny = g->ny;
-    long Kx = g->kx;
-    long Ky = g->ky;
-    long dx = g->dx;
-    long dy = g->dy;
-    long K = g->K;
-    long wx = Kx/2;
-    long wy = Ky/2;
     long k = vrtx[t];
-    long h = K*dx*dy;
-    long v = nx*ny;
     for(long iy=0,i=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
@@ -315,6 +328,29 @@ void hid2vis_worker ( worker_dat<T> * g
       }
     }
   }
+}
+
+template<typename T>
+T * Gabor ( long nx
+          , long ny 
+          , T lambda
+          , T theta
+          , T phi
+          , T sigma
+          , T gamma
+          )
+{
+    T * out = new T[nx*ny];
+    long wx=nx/2;
+    long wy=ny/2;
+    for(long x=-wx,k=0;x<=wx;x++)
+    for(long y=-wy;y<=wy;y++,k++)
+    {
+        double X = x*cos(theta) + y*sin(theta);
+        double Y = y*cos(theta) - x*sin(theta);
+        out[k] = exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
+    }
+    return out;
 }
 
 template<typename T>
@@ -438,9 +474,31 @@ struct ConvolutionalRBM
     c = new T[K*dx*dy];
     b = new T[nx*ny];
     W = new T[K*kx*ky];
-    set_val<T>(c,0.5f,K*dx*dy);
-    set_val<T>(b,0.5f,nx*ny);
-    constant<T>(W,1,K*kx*ky);
+    set_val<T>(c,0.0f,K*dx*dy);
+    set_val<T>(b,0.0f,nx*ny);
+    constant<T>(W,0,K*kx*ky);
+
+    for(long k=0,i=0;k<K;k++)
+    {
+        //long J = 1 + (int)((2*k)/K);
+        //std::cout << k << '\t' << J << std::endl;
+        // exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
+        T * gab = Gabor < T > ( kx                      // nx
+                              , ky                      // ny
+                              , (double)kx/1            // lambda
+                              , 2*M_PI*(double)(k)/(K)  // theta
+                              , M_PI/2                  // phi
+                              , kx                      // sigma
+                              , 1.0                     // gamma
+                              );
+        for(long x=0,j=0;x<kx;x++)
+        for(long y=0;y<ky;y++,i++,j++)
+        {
+            W[i] = (((x==kx/2&&y==ky/2)?1:0)+0.0*gab[j])/(double)K;
+        }
+        delete [] gab;
+    }
+    //exit(1);
 
     vis0 = NULL;
     hid0 = NULL;
@@ -486,9 +544,9 @@ struct ConvolutionalRBM
     //   approximated CD. The sum of the average hidden units
     //   activity is returned in act as well.
 
-    for(long i=0;i<n*h;i++)
+    for(long i=0;i<n*v;i++)
     {
-      hid[i] = hid0[i];
+      vis[i] = vis0[i];
     }
     boost::posix_time::ptime time_1(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration10(time_1 - time_0);
@@ -498,8 +556,8 @@ struct ConvolutionalRBM
     {
       //std::cout << "iter=" << iter << std::endl;
       // sampling
-      hid2vis(hid,vis);
       vis2hid(vis,hid);
+      hid2vis(hid,vis);
 
 // Preview stuff
 #if 0
@@ -552,7 +610,7 @@ struct ConvolutionalRBM
     boost::posix_time::ptime time_4(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration43(time_4 - time_3);
     //std::cout << "cd timing 4:" << duration43 << '\n';
-    *err = sqrt(*err);
+    //*err = sqrt(*err);
     //for(int t=2;t<3&&t<errs.size();t++)
     //  *err += (errs[errs.size()+1-t]-*err)/t;
     final_error = *err;
@@ -567,7 +625,7 @@ struct ConvolutionalRBM
     //std::cout << "cd timing 5:" << duration54 << '\n';
     //std::cout << "epsilon = " << epsilon << std::endl;
     add(W,dW,-epsilon,K*kx*ky);
-    //add(c,dc,-epsilon,dx*dy);
+    //add(c,dc,-epsilon,K*dx*dy);
     //add(b,db,-epsilon,nx*ny);
 
     //std::cout << "dW norm = " << norm(dW,v*h) << std::endl;
