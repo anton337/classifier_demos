@@ -25,7 +25,7 @@ int main(int argc,char ** argv)
     long ky = 3;
     long dx = nx-2*(kx/2);
     long dy = ny-2*(ky/2);
-    long K = 8;
+    long K = 24;
     double * dat_full = img->get_doubles(nx,ny);
     for(long x=0,k=0;x<nx;x++)
     {
@@ -122,6 +122,7 @@ int main(int argc,char ** argv)
             }
             std::cout << std::endl;
         }
+        for(long t=0;t<4;t++)
         {
             double min_val = 0;
             double max_val = 0;
@@ -129,37 +130,37 @@ int main(int argc,char ** argv)
             {
                 for(long y=0;y<dy;y++,k++)
                 {
-                    min_val = (min_val<rbm->hid[k+ind_hid])?min_val:rbm->hid[k+ind_hid];
-                    max_val = (max_val>rbm->hid[k+ind_hid])?max_val:rbm->hid[k+ind_hid];
+                    min_val = (min_val<rbm->hid[k+dx*dy*t+ind_hid])?min_val:rbm->hid[k+dx*dy*t+ind_hid];
+                    max_val = (max_val>rbm->hid[k+dx*dy*t+ind_hid])?max_val:rbm->hid[k+dx*dy*t+ind_hid];
                 }
             }
             for(long x=0,k=0;x<dx;x++)
             {
                 for(long y=0;y<dy;y++,k++)
                 {
-                    std::cout << (((rbm->hid[k+ind_hid]-min_val)/(max_val-min_val)>0.5)?'*':'.');
+                    std::cout << (((rbm->hid[k+dx*dy*t+ind_hid]-min_val)/(max_val-min_val)>0.5)?'*':'.');
                 }
                 std::cout << std::endl;
             }
             std::cout << std::endl;
         }
-        for(long x=0,k=0;x<kx;x++)
-        {
-            for(long y=0;y<ky;y++,k++)
-            {
-                std::cout << rbm->W[k] << '\t';
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-        for(long x=0,k=0;x<kx;x++)
-        {
-            for(long y=0;y<ky;y++,k++)
-            {
-                std::cout << rbm->dW[k] << '\t';
-            }
-            std::cout << std::endl;
-        }
+        //for(long x=0,k=0;x<kx;x++)
+        //{
+        //    for(long y=0;y<ky;y++,k++)
+        //    {
+        //        std::cout << rbm->W[k] << '\t';
+        //    }
+        //    std::cout << std::endl;
+        //}
+        //std::cout << std::endl;
+        //for(long x=0,k=0;x<kx;x++)
+        //{
+        //    for(long y=0;y<ky;y++,k++)
+        //    {
+        //        std::cout << rbm->dW[k] << '\t';
+        //    }
+        //    std::cout << std::endl;
+        //}
         std::cout << std::endl;
         std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
       }
