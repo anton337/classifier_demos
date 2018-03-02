@@ -39,7 +39,7 @@ int main(int argc,char ** argv)
     }
     std::cout << std::endl;
     long full_n = img->get_size()/(nx*ny);
-    long n = 32;
+    long n = full_n;//32;
     double * dat = new double[n*nx*ny];
     for(long i=0,k=0;i<n;i++)
     {
