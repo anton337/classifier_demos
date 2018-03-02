@@ -1,43 +1,7 @@
 #ifndef RBM_H
 #define RBM_H
 
-template<typename T>
-T norm(T * dat,long size)
-{
-  T ret = 0;
-  for(long i=0;i<size;i++)
-  {
-    ret += dat[i]*dat[i];
-  }
-  return sqrt(ret);
-}
-
-template<typename T>
-void zero(T * dat,long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    dat[i] = 0;
-  }
-}
-
-template<typename T>
-void constant(T * dat,T val,long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    dat[i] = (-1+2*((rand()%10000)/10000.0f))*val;
-  }
-}
-
-template<typename T>
-void add(T * A, T * dA, T epsilon, long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    A[i] += epsilon * dA[i];
-  }
-}
+#include "common.h"
 
 template<typename T>
 struct gradient_info

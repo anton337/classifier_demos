@@ -2,6 +2,7 @@
 #include "ConvolutionalRBM.h"
 #include "text.h"
 #include "readBMP.h"
+#include "visualization.h"
 
 void clear() 
 {
@@ -25,6 +26,7 @@ int main(int argc,char ** argv)
     long ky = 3;
     long dx = nx-2*(kx/2);
     long dy = ny-2*(ky/2);
+    long M = 1;
     long K = 24;
     double * dat_full = img->get_doubles(nx,ny);
     for(long x=0,k=0;x<nx;x++)
@@ -49,7 +51,7 @@ int main(int argc,char ** argv)
             }
         }
     }
-    rbm = new ConvolutionalRBM<double> ( nx*ny
+    rbm = new ConvolutionalRBM<double> ( M*nx*ny
                                        , K*dx*dy
                                        , nx
                                        , ny
@@ -57,10 +59,20 @@ int main(int argc,char ** argv)
                                        , dy
                                        , kx
                                        , ky
+                                       , M
                                        , K
                                        , n
                                        , dat
                                        );
+
+    VisualizeCRBMConvolutionProbe < double > * viz_crbm_convolution = NULL;
+    viz_crbm_convolution = new VisualizeCRBMConvolutionProbe < double > ( rbm
+                                                                        , new CRBMConvolutionProbe < double > ( rbm )
+                                                                        , 0.25 , 0.5
+                                                                        ,-1 , 1
+                                                                       );
+    addDisplay ( viz_crbm_convolution );
+
     double eps = 1e-1;
     bool init = true;
     double init_error;
@@ -122,7 +134,7 @@ int main(int argc,char ** argv)
             }
             std::cout << std::endl;
         }
-        for(long t=0;t<4;t++)
+        for(long t=0;t<1;t++)
         {
             double min_val = 0;
             double max_val = 0;

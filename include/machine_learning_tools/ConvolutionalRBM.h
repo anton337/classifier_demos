@@ -5,55 +5,10 @@
 #include <stdlib.h>
 #include <boost/thread.hpp>
 
-template<typename T>
-T norm(T * dat,long size)
-{
-  T ret = 0;
-  for(long i=0;i<size;i++)
-  {
-    ret += dat[i]*dat[i];
-  }
-  return sqrt(ret);
-}
+#include "common.h"
 
 template<typename T>
-void zero(T * dat,long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    dat[i] = 0;
-  }
-}
-
-template<typename T>
-void set_val(T * dat,T val,long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    dat[i] = val;
-  }
-}
-
-template<typename T>
-void constant(T * dat,T val,long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    dat[i] = (-1+2*((rand()%10000)/10000.0f))*val;
-  }
-}
-
-template<typename T>
-void add(T * A, T * dA, T epsilon, long size)
-{
-  for(long i=0;i<size;i++)
-  {
-    A[i] += epsilon * dA[i];
-  }
-}
-
-template<typename T>
-struct gradient_info
+struct crbm_gradient_info
 {
   long n;
   long v;
@@ -64,6 +19,7 @@ struct gradient_info
   long dy;
   long kx;
   long ky;
+  long M;
   long K;
   T * vis0;
   T * hid0;
@@ -79,12 +35,12 @@ struct gradient_info
   void init()
   {
     partial_err = 0;
-    partial_dW = new T[K*kx*ky];
-    for(int i=0;i<K*kx*ky;i++)partial_dW[i]=0;
+    partial_dW = new T[M*K*kx*ky];
+    for(int i=0;i<M*K*kx*ky;i++)partial_dW[i]=0;
     partial_dc = new T[K*dx*dy];
     for(int i=0;i<K*dx*dy;i++)partial_dc[i]=0;
-    partial_db = new T[nx*ny];
-    for(int i=0;i<nx*ny;i++)partial_db[i]=0;
+    partial_db = new T[M*nx*ny];
+    for(int i=0;i<M*nx*ny;i++)partial_db[i]=0;
   }
   void destroy()
   {
@@ -94,17 +50,17 @@ struct gradient_info
   }
   void globalUpdate()
   {
-    for(int i=0;i<K*kx*ky;i++)
+    for(int i=0;i<M*K*kx*ky;i++)
         dW[i] += partial_dW[i];
     for(int i=0;i<K*dx*dy;i++)
         dc[i] += partial_dc[i];
-    for(int i=0;i<nx*ny;i++)
+    for(int i=0;i<M*nx*ny;i++)
         db[i] += partial_db[i];
   }
 };
 
 template<typename T>
-void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
+void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vrtx)
 {
   long Ky = g->ky;
   long Kx = g->kx;
@@ -112,11 +68,12 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
   long nx = g->nx;
   long dy = g->dy;
   long dx = g->dx;
+  long M = g->M;
   long K = g->K;
   long wy = Ky/2;
   long wx = Kx/2;
   long h = K*dx*dy;
-  long v = nx*ny;
+  long v = M*nx*ny;
   T factor = 1.0f / (g->n*dx*dy);
   T factorb= 1.0f / (g->n*nx*ny);
   T factorv= 1.0f / (g->v);
@@ -124,9 +81,10 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
   for(long t=0;t<vrtx.size();t++)
   {
     long k = vrtx[t];
-    // dW       [K x kx x ky]
-    // vis      [nx x ny]
+    // dW       [M x K x kx x ky]
+    // vis      [M x nx x ny]
     // hid      [K x dx x dy]
+    for(long m=0;m<M;m++)
     for(long z=0;z<K;z++)
     {
         T sum = 0;
@@ -140,7 +98,7 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
           long iy = oy+wy+ky;
           long ix = ox+wx+kx;
           // flipped here
-          g->partial_dW[z*Kx*Ky+i] -= factor * (g->vis0[k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
+          g->partial_dW[m*K*Kx*Ky+z*Kx*Ky+i] -= factor * (g->vis0[m*nx*ny+k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[m*nx*ny+k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
           //sum += fabs(g->partial_dW[z*Kx*Ky+i]);
         }
         //for(long ky=-wy,i=0;ky<=wy;ky++)
@@ -157,16 +115,18 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
       g->partial_dc[z*dx*dx+j] -= factor * (g->hid0[z*dx*dy+k*h+j]*g->hid0[z*dx*dy+k*h+j] - g->hid[z*dx*dy+k*h+j]*g->hid[z*dx*dy+k*h+j]);
     }
 
+    for(long m=0;m<M;m++)
     for(long iy=0,i=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
-      g->partial_db[i] -= factorb * (g->vis0[k*v+i]*g->vis0[k*v+i] - g->vis[k*v+i]*g->vis[k*v+i]);
+      g->partial_db[i] -= factorb * (g->vis0[m*nx*ny+k*v+i]*g->vis0[m*nx*ny+k*v+i] - g->vis[m*nx*ny+k*v+i]*g->vis[m*nx*ny+k*v+i]);
     }
 
+    for(long m=0;m<M;m++)
     for(long iy=0,i=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
-      g->partial_err += factorv * fabs(g->vis0[k*v+i]-g->vis[k*v+i]);
+      g->partial_err += factorv * fabs(g->vis0[m*nx*ny+k*v+i]-g->vis[m*nx*ny+k*v+i]);
     }
     
   }
@@ -183,6 +143,7 @@ struct worker_dat
   long dx;
   long dy;
   long K;
+  long M;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -223,40 +184,32 @@ void vis2hid_worker ( worker_dat<T> * g
   long dx = g->dx;
   long dy = g->dy;
   long K = g->K;
+  long M = g->M;
   long wx = Kx/2;
   long wy = Ky/2;
   long h = K*dx*dy;
-  long v = nx*ny;
-  //T * sum = new T[K];
+  long v = M*nx*ny;
   for(long t=0;t<vrtx.size();t++)
   {
     long k = vrtx[t];
     for(long z=0,j=0;z<K;z++)
     {
-      //sum[z] = 0;
       for(long oy=0;oy<dy;oy++)
       for(long ox=0;ox<dx;ox++,j++)
       {
         H[k*h+j] = c[j]; 
+        for(long m=0;m<M;m++)
         for(long ky=-wy,i=0;ky<=wy;ky++)
         for(long kx=-wx;kx<=wx;kx++,i++)
         {
           long iy=oy+wy+ky;
           long ix=ox+wx+kx;
-          H[k*h+j] += W[z*Kx*Ky+i] * X[k*v+nx*iy+ix];
+          H[k*h+j] += W[m*K*Kx*Ky+z*Kx*Ky+i] * X[m*nx*ny+k*v+nx*iy+ix];
         }
         H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
-        //sum[z] += H[k*h+j];
       }
     }
-    //for(long z=0,j=0;z<K;z++)
-    //for(long oy=0;oy<dy;oy++)
-    //for(long ox=0;ox<dx;ox++,j++)
-    //{
-    //  H[k*h+j] /= sum[z];
-    //}
   }
-  //delete [] sum;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -294,14 +247,16 @@ void hid2vis_worker ( worker_dat<T> * g
   long dx = g->dx;
   long dy = g->dy;
   long K = g->K;
+  long M = g->M;
   long wx = Kx/2;
   long wy = Ky/2;
   long h = K*dx*dy;
-  long v = nx*ny;
+  long v = M*nx*ny;
   for(long t=0;t<vrtx.size();t++)
   {
     long k = vrtx[t];
-    for(long iy=0,i=0;iy<ny;iy++)
+    for(long m=0,i=0;m<M;m++)
+    for(long iy=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
       if ( ix      >= 2*wx 
@@ -331,29 +286,6 @@ void hid2vis_worker ( worker_dat<T> * g
 }
 
 template<typename T>
-T * Gabor ( long nx
-          , long ny 
-          , T lambda
-          , T theta
-          , T phi
-          , T sigma
-          , T gamma
-          )
-{
-    T * out = new T[nx*ny];
-    long wx=nx/2;
-    long wy=ny/2;
-    for(long x=-wx,k=0;x<=wx;x++)
-    for(long y=-wy;y<=wy;y++,k++)
-    {
-        double X = x*cos(theta) + y*sin(theta);
-        double Y = y*cos(theta) - x*sin(theta);
-        out[k] = exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
-    }
-    return out;
-}
-
-template<typename T>
 struct ConvolutionalRBM
 {
 
@@ -371,6 +303,7 @@ struct ConvolutionalRBM
   long dy;
   long kx;
   long ky;
+  long M;
   long K;
   T * c; // bias term for hidden state, R^h
   T * b; // bias term for visible state, R^v
@@ -393,6 +326,7 @@ struct ConvolutionalRBM
                    , long _dy
                    , long _kx
                    , long _ky
+                   , long _M
                    , long _K
                    , T * _W
                    , T * _b
@@ -413,6 +347,7 @@ struct ConvolutionalRBM
     dy = _dy;
     kx = _kx;
     ky = _ky;
+    M = _M;
     K = _K;
     n = _n;
     c = _c;
@@ -443,6 +378,7 @@ struct ConvolutionalRBM
                    , long _dy
                    , long _kx
                    , long _ky
+                   , long _M
                    , long _K
                    , long _n
                    , T* _X
@@ -460,25 +396,27 @@ struct ConvolutionalRBM
     dy = _dy;
     kx = _kx;
     ky = _ky;
+    M = _M;
     K = _K;
     n = _n;
 
     // error checks
     if(kx % 2 == 0){std::cout << "kx needs to be odd" << std::endl;exit(1);}
     if(ky % 2 == 0){std::cout << "ky needs to be odd" << std::endl;exit(1);}
-    if(v != nx*ny) {std::cout << "v should be nx*ny" << std::endl;exit(1);}
+    if(v != M*nx*ny) {std::cout << "v should be M*nx*ny" << std::endl;exit(1);}
     if(h != K*dx*dy) {std::cout << "h should be K*dx*dy" << std::endl;exit(1);}
     if(dx + 2*(kx/2) != nx) {std::cout << "nx should be dx + 2*(kx/2)" << std::endl;exit(1);}
     if(dy + 2*(ky/2) != ny) {std::cout << "ny should be dy + 2*(ky/2)" << std::endl;exit(1);}
 
     c = new T[K*dx*dy];
-    b = new T[nx*ny];
-    W = new T[K*kx*ky];
+    b = new T[M*nx*ny];
+    W = new T[M*K*kx*ky];
     set_val<T>(c,0.0f,K*dx*dy);
-    set_val<T>(b,0.0f,nx*ny);
-    constant<T>(W,0,K*kx*ky);
+    set_val<T>(b,0.0f,M*nx*ny);
+    constant<T>(W,0,M*K*kx*ky);
 
-    for(long k=0,i=0;k<K;k++)
+    for(long m=0,i=0;m<M;m++)
+    for(long k=0;k<K;k++)
     {
         //long J = 1 + (int)((2*k)/K);
         //std::cout << k << '\t' << J << std::endl;
@@ -516,9 +454,9 @@ struct ConvolutionalRBM
     if(hid0==NULL)hid0 = new T[n*h];
     if(vis==NULL)vis = new T[n*v];
     if(hid==NULL)hid = new T[n*h];
-    if(dW==NULL)dW = new T[K*kx*ky];
+    if(dW==NULL)dW = new T[M*K*kx*ky];
     if(dc==NULL)dc = new T[K*dx*dy];
-    if(db==NULL)db = new T[nx*ny];
+    if(db==NULL)db = new T[M*nx*ny];
 
     //std::cout << "n*v=" << n*v << std::endl;
     //std::cout << "offset=" << offset << std::endl;
@@ -599,9 +537,9 @@ struct ConvolutionalRBM
     boost::posix_time::time_duration duration21(time_2 - time_1);
     //std::cout << "cd timing 2:" << duration21 << '\n';
   
-    zero(dW,K*kx*ky);
+    zero(dW,M*K*kx*ky);
     zero(dc,K*dx*dy);
-    zero(db,nx*ny);
+    zero(db,M*nx*ny);
     boost::posix_time::ptime time_3(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration32(time_3 - time_2);
     //std::cout << "cd timing 3:" << duration32 << '\n';
@@ -624,9 +562,9 @@ struct ConvolutionalRBM
     boost::posix_time::time_duration duration54(time_5 - time_4);
     //std::cout << "cd timing 5:" << duration54 << '\n';
     //std::cout << "epsilon = " << epsilon << std::endl;
-    add(W,dW,-epsilon,K*kx*ky);
+    add(W,dW,-epsilon,M*K*kx*ky);
     //add(c,dc,-epsilon,K*dx*dy);
-    //add(b,db,-epsilon,nx*ny);
+    //add(b,db,-epsilon,M*nx*ny);
 
     //std::cout << "dW norm = " << norm(dW,v*h) << std::endl;
     //std::cout << "dc norm = " << norm(dc,h) << std::endl;
@@ -697,7 +635,7 @@ struct ConvolutionalRBM
 
     std::vector<boost::thread*> threads;
     std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
-    std::vector<gradient_info<T>*> g;
+    std::vector<crbm_gradient_info<T>*> g;
 
     boost::posix_time::ptime time_1(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration10(time_1 - time_0);
@@ -712,7 +650,7 @@ struct ConvolutionalRBM
     //std::cout << "gradient update timing 2:" << duration21 << '\n';
     for(long i=0;i<vrtx.size();i++)
     {
-      g.push_back(new gradient_info<T>());
+      g.push_back(new crbm_gradient_info<T>());
     }
     boost::posix_time::ptime time_3(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration32(time_3 - time_2);
@@ -729,6 +667,7 @@ struct ConvolutionalRBM
       g[thread]->kx = kx;
       g[thread]->ky = ky;
       g[thread]->K = K;
+      g[thread]->M = M;
       g[thread]->vis0 = vis0;
       g[thread]->hid0 = hid0;
       g[thread]->vis = vis;
@@ -737,7 +676,7 @@ struct ConvolutionalRBM
       g[thread]->dc = dc;
       g[thread]->db = db;
       g[thread]->init();
-      threads.push_back(new boost::thread(gradient_worker<T>,g[thread],vrtx[thread]));
+      threads.push_back(new boost::thread(crbm_gradient_worker<T>,g[thread],vrtx[thread]));
     }
     boost::posix_time::ptime time_4(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration43(time_4 - time_3);
@@ -769,6 +708,7 @@ struct ConvolutionalRBM
     D->kx = kx;
     D->ky = ky;
     D->K = K;
+    D->M = M;
     std::vector<boost::thread*> threads;
     std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
     for(long i=0;i<n;i++)
@@ -799,6 +739,7 @@ struct ConvolutionalRBM
     D->kx = kx;
     D->ky = ky;
     D->K = K;
+    D->M = M;
     std::vector<boost::thread*> threads;
     std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
     for(long i=0;i<n;i++)

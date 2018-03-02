@@ -1,6 +1,7 @@
 #ifndef CONVOLUTIONAL_NEURAL_NETWORK_H
 #define CONVOLUTIONAL_NEURAL_NETWORK_H
 
+
 float scale_factor = 1;
 float scale_factor_2 = 1;
 
@@ -9,6 +10,8 @@ float scale_factor_2 = 1;
 #include <sstream>
 #include <vector>
 #include <boost/thread.hpp>
+
+#include "common.h"
 
 #include "Perceptron.h"
 
@@ -1373,29 +1376,6 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
         }
         */
     }
-}
-
-template<typename T>
-T * Gabor ( long nx
-          , long ny 
-          , T lambda
-          , T theta
-          , T phi
-          , T sigma
-          , T gamma
-          )
-{
-    T * out = new T[nx*ny];
-    long wx=nx/2;
-    long wy=ny/2;
-    for(long x=-wx,k=0;x<=wx;x++)
-    for(long y=-wy;y<=wy;y++,k++)
-    {
-        double X = x*cos(theta) + y*sin(theta);
-        double Y = y*cos(theta) - x*sin(theta);
-        out[k] = exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
-    }
-    return out;
 }
 
 template<typename T>
