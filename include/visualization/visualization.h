@@ -10,7 +10,9 @@
 #include "visualize_activation_probe.h"
 #include "visualize_cnn_activation_probe.h"
 #include "visualize_cnn_convolution_probe.h"
-#include "visualize_crbm_convolution_probe.h"
+#include "visualize_crbm_visible_probe.h"
+#include "visualize_crbm_hidden_probe.h"
+#include "visualize_crbm_kernel_probe.h"
 
 bool change_pos_index  = false;
 bool change_neg_index  = false;
@@ -41,120 +43,6 @@ void draw(void)
     {
         displays[i] -> update ();
     }
-
-#if 0
-
-#ifdef VISUALIZE_ACTIVATION_PROBE
-
-#endif
-
-#ifdef VISUALIZE_RBM_RECONSTRUCTION
-    if(change_pos_index)
-    {
-        rbm_selection++;
-        if(rbm_selection*rbm_vars >= rbm_elems)
-        {
-            rbm_selection = 0;
-        }
-    }
-    if(change_neg_index)
-    {
-        rbm_selection--;
-        if(rbm_selection < 0)
-        {
-            rbm_selection = 0;
-        }
-    }
-    if(change_down_index)
-    {
-        rbm_selection+=rbm_stride;
-        if(rbm_selection*rbm_vars >= rbm_elems)
-        {
-            rbm_selection = 0;
-        }
-    }
-    if(change_up_index)
-    {
-        rbm_selection-=rbm_stride;
-        if(rbm_selection < 0)
-        {
-            rbm_selection = 0;
-        }
-    }
-    visualize_rbm_reconstruction < double > ( viz_rbm 
-                                            , rbm_max_layer
-                                            , rbm_selection 
-                                            , rbm_elems 
-                                            , rbm_vars 
-                                            , rbm_nx 
-                                            , rbm_ny 
-                                            , rbm_dat 
-                                            , -1 
-                                            , 0 
-                                            , -1 
-                                            , 1 
-                                            );
-#endif
-
-#ifdef VISUALIZE_SIGNAL
-    visualize_signal ( sig_elems , sig_dat );
-    visualize_reconstruction ( sig_perceptron , sig_elems , sig_dat , sig_prct , sig_num_in , sig_start_elem );
-#endif
-
-#ifdef VISUALIZE_DATA_ARRAY
-    if(change_pos_index)
-    {
-        viz_selection++;
-        if(viz_selection*n_vars >= n_elems)
-        {
-            viz_selection = 0;
-        }
-    }
-    if(change_neg_index)
-    {
-        viz_selection--;
-        if(viz_selection < 0)
-        {
-            viz_selection = 0;
-        }
-    }
-    if(change_down_index)
-    {
-        viz_selection+=n_stride;
-        if(viz_selection*n_vars >= n_elems)
-        {
-            viz_selection = 0;
-        }
-    }
-    if(change_up_index)
-    {
-        viz_selection-=n_stride;
-        if(viz_selection < 0)
-        {
-            viz_selection = 0;
-        }
-    }
-    visualize_data_array < double > ( viz_selection
-                                    , n_elems
-                                    , n_vars
-                                    , n_x
-                                    , n_y
-                                    , viz_dat
-                                    , 0 
-                                    , 1 
-                                    , -1 
-                                    , 1 
-                                    );
-#endif
-
-#ifdef VISUALIZE_MODEL_OUTPUT
-    visualize_model_output ( mod_perceptron
-                           , mod_min_x , mod_max_x , mod_n_x
-                           , mod_min_y , mod_max_y , mod_n_y
-                           );
-#endif
-
-#endif
 
     change_pos_index = false;
     change_neg_index = false;

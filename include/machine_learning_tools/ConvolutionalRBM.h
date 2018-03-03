@@ -62,6 +62,7 @@ struct crbm_gradient_info
 template<typename T>
 void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vrtx)
 {
+  
   long Ky = g->ky;
   long Kx = g->kx;
   long ny = g->ny;
@@ -130,7 +131,7 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
     }
     
   }
-  
+   
 }
 
 template<typename T>
@@ -177,6 +178,7 @@ void vis2hid_worker ( worker_dat<T> * g
                     , std::vector<long> const & vrtx
                     )
 {
+  
   long nx = g->nx;
   long ny = g->ny;
   long Kx = g->kx;
@@ -206,10 +208,12 @@ void vis2hid_worker ( worker_dat<T> * g
           long ix=ox+wx+kx;
           H[k*h+j] += W[m*K*Kx*Ky+z*Kx*Ky+i] * X[m*nx*ny+k*v+nx*iy+ix];
         }
-        H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
+        //H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
+        H[k*h+j] = 10*atan(0.1*H[k*h+j]);
       }
     }
   }
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,6 +244,7 @@ void hid2vis_worker ( worker_dat<T> * g
                     , std::vector<long> const & vrtx
                     )
 {
+  
   long nx = g->nx;
   long ny = g->ny;
   long Kx = g->kx;
@@ -272,17 +277,20 @@ void hid2vis_worker ( worker_dat<T> * g
         {
           long oy=iy-wy+ky;
           long ox=ix-wx+kx;
-          V[k*v+i] += W[z*Kx*Ky+Kx*fy+fx] * H[k*h+dx*oy+ox]; // W is flipped here!
+          V[k*v+i] += W[m*K*Kx*Ky+z*Kx*Ky+Kx*fy+fx] * H[k*h+dx*oy+ox]; // W is flipped here!
           //V[k*v+i] += W[z*Kx*Ky+Kx*ty+tx] * H[k*h+dx*oy+ox]; 
         }
-        V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
+        //V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
+        V[k*v+i] = 10*atan(0.1*V[k*v+i]);
       }
       else
       {
         // do nothing, keep original values of V
+        //V[k*v+i] = 0;
       }
     }
   }
+  
 }
 
 template<typename T>
@@ -418,24 +426,37 @@ struct ConvolutionalRBM
     for(long m=0,i=0;m<M;m++)
     for(long k=0;k<K;k++)
     {
-        //long J = 1 + (int)((2*k)/K);
-        //std::cout << k << '\t' << J << std::endl;
-        // exp(-(X*X+gamma*gamma*Y*Y)/(2*sigma*sigma)) * cos(2*M_PI*X/lambda + phi);
-        T * gab = Gabor < T > ( kx                      // nx
-                              , ky                      // ny
-                              , (double)kx/1            // lambda
-                              , 2*M_PI*(double)(k)/(K)  // theta
-                              , M_PI/2                  // phi
-                              , kx                      // sigma
-                              , 1.0                     // gamma
+      if(k==0)
+      {
+        for(long x=0,j=0;x<kx;x++)
+        for(long y=0;y<ky;y++,i++,j++)
+        {
+            W[i] = (x==kx/2&&y==ky/2)?1.0/M:0;
+        }
+      }
+      else
+      {
+        long J = 1 + 2*(k-1)/(K-1);
+        std::cout << J << std::endl;
+        T * gab = Gabor < T > ( kx                          // nx
+                              , ky                          // ny
+                              , (double)kx/J                // lambda
+                              , 4*M_PI*(double)(k-1)/(K-1)  // theta
+                              , M_PI/2                      // phi
+                              , (double)kx/2                // sigma
+                              , 1.0                         // gamma
                               );
         for(long x=0,j=0;x<kx;x++)
         for(long y=0;y<ky;y++,i++,j++)
         {
-            W[i] = (((x==kx/2&&y==ky/2)?1:0)+0.0*gab[j])/(double)K;
+            //W[i] = (x==kx/2&&y==ky/2)?1.0:0;
+            W[i] = (gab[j])/M;
         }
         delete [] gab;
+      }
     }
+    //char ch;
+    //std::cin >> ch;
     //exit(1);
 
     vis0 = NULL;
@@ -486,6 +507,7 @@ struct ConvolutionalRBM
     {
       vis[i] = vis0[i];
     }
+    vis2hid(vis0,hid0);
     boost::posix_time::ptime time_1(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration10(time_1 - time_0);
     //std::cout << "cd timing 1:" << duration10 << '\n';
@@ -496,43 +518,9 @@ struct ConvolutionalRBM
       // sampling
       vis2hid(vis,hid);
       hid2vis(hid,vis);
-
-// Preview stuff
-#if 0
-      long off = dat_offset%(n);
-      long offv = off*v;
-      long offh = off*h;
-      long off_preview = off*(3*WIN*WIN+10);
-      for(long x=0,k=0;x<WIN;x++)
-      {
-        for(long y=0;y<WIN;y++,k++)
-        {
-          vis_preview[k] = vis[offv+k];
-          vis_previewG[k] = vis[offv+k+WIN*WIN];
-          vis_previewB[k] = vis[offv+k+2*WIN*WIN];
-        }
-      }
-      for(long x=0,k=0;x<WIN;x++)
-      {
-        for(long y=0;y<WIN;y++,k++)
-        {
-          vis1_preview[k] = orig_arr[offset+off_preview+k];
-          vis1_previewG[k] = orig_arr[offset+off_preview+k+WIN*WIN];
-          vis1_previewB[k] = orig_arr[offset+off_preview+k+2*WIN*WIN];
-        }
-      }
-      for(long x=0,k=0;x<WIN;x++)
-      {
-        for(long y=0;y<WIN;y++,k++)
-        {
-          vis0_preview[k] = vis0[offv+k];
-          vis0_previewG[k] = vis0[offv+k+WIN*WIN];
-          vis0_previewB[k] = vis0[offv+k+2*WIN*WIN];
-        }
-      }
-#endif
-
     }
+    //return;
+
     boost::posix_time::ptime time_2(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration21(time_2 - time_1);
     //std::cout << "cd timing 2:" << duration21 << '\n';

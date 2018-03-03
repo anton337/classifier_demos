@@ -12,6 +12,38 @@ void clear()
 
 ConvolutionalRBM<double> * rbm = NULL;
 
+long nx = 20;
+long ny = 20;
+long kx = 5;
+long ky = 5;
+long dx = nx-2*(kx/2);
+long dy = ny-2*(ky/2);
+long M = 2;
+long K = 16+1;
+long n = 8;
+
+void train()
+{
+    double eps = 1e-3;
+    bool init = true;
+    double init_error;
+    for(long i=0;;i++)
+    {
+      rbm -> init(0);
+      rbm -> cd(10,eps,0);
+      if(init)
+      {
+        init = false;
+        init_error = rbm->final_error;
+      }
+      if(i%100==0)
+      {
+        std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+      }
+    }
+
+}
+
 int main(int argc,char ** argv)
 {
   std::cout << "Convolutional RBM Test." << std::endl;
@@ -20,34 +52,34 @@ int main(int argc,char ** argv)
   {
     Image * img = new Image();
     ImageLoad(argv[1],img);
-    long nx = 20;
-    long ny = 20;
-    long kx = 3;
-    long ky = 3;
-    long dx = nx-2*(kx/2);
-    long dy = ny-2*(ky/2);
-    long M = 1;
-    long K = 24;
     double * dat_full = img->get_doubles(nx,ny);
-    for(long x=0,k=0;x<nx;x++)
+    for(long m=0,k=0;m<M;m++)
     {
-        for(long y=0;y<ny;y++,k++)
+        for(long x=0;x<nx;x++)
         {
-            std::cout << ((dat_full[k]>0.5)?'*':' ');
+          for(long y=0;y<ny;y++,k++)
+          {
+              std::cout << ((dat_full[0*M*nx*ny+m*ny*nx+x*ny+y]>0.5)?'*':' ');
+          }
+          std::cout << std::endl;
         }
-        std::cout << std::endl;
     }
     std::cout << std::endl;
     long full_n = img->get_size()/(nx*ny);
-    long n = full_n;//32;
-    double * dat = new double[n*nx*ny];
+    double * dat = new double[M*n*nx*ny];
     for(long i=0,k=0;i<n;i++)
     {
+      long ind_1 = rand()%(full_n-1);
+      long ind_2 = ind_1+1;
+        for(long m=0;m<M;m++)
         for(long x=0;x<nx;x++)
         {
             for(long y=0;y<ny;y++,k++)
             {
-                dat[k] = dat_full[((987*i)%full_n)*nx*ny+(nx-1-x)*ny+y];
+              if(m==0)
+                dat[k] = dat_full[ind_1*nx*ny+x*ny+y];
+              else
+                dat[k] = dat_full[ind_2*nx*ny+x*ny+y];
             }
         }
     }
@@ -65,125 +97,40 @@ int main(int argc,char ** argv)
                                        , dat
                                        );
 
-    VisualizeCRBMConvolutionProbe < double > * viz_crbm_convolution = NULL;
-    viz_crbm_convolution = new VisualizeCRBMConvolutionProbe < double > ( rbm
-                                                                        , new CRBMConvolutionProbe < double > ( rbm )
-                                                                        , 0.25 , 0.5
-                                                                        ,-1 , 1
-                                                                       );
-    addDisplay ( viz_crbm_convolution );
+    VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
+    viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm
+                                                                , new CRBMConvolutionProbe < double > ( rbm )
+                                                                , -1 , -.5
+                                                                , -1 , 1
+                                                                );
+    addDisplay ( viz_crbm_visible );
 
-    double eps = 1e-1;
-    bool init = true;
-    double init_error;
-    for(long i=0;;i++)
-    {
-      rbm -> init(0);
-      rbm -> cd(1,eps,0);
-      if(init)
-      {
-        init = false;
-        init_error = rbm->final_error;
-      }
-      if(i%10==0)
-      {
-        clear();
-        std::cout << "\033[1;31mconvolutional rbm\033[0m\n";
-        //for(long z=0,k=0;z<K;z++)
-        //{
-        //  for(long x=0;x<kx;x++)
-        //  {
-        //    for(long y=0;y<ky;y++,k++)
-        //    {
-        //      std::cout << ((rbm->W[k]>0)?'*':' ');
-        //    }
-        //    std::cout << '\n';
-        //  }
-        //  std::cout << '\n';
-        //}
-        long ind = i%n;
-        long ind_vis = ind*nx*ny;
-        long ind_hid = ind*K*dx*dy;
-        for(long x=0,k=0;x<nx;x++)
-        {
-            for(long y=0;y<ny;y++,k++)
-            {
-                std::cout << ((rbm->vis0[k+ind_vis]>0.5)?'*':'.');
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-        {
-            double min_val = 0;
-            double max_val = 0;
-            for(long x=0,k=0;x<nx;x++)
-            {
-                for(long y=0;y<ny;y++,k++)
-                {
-                    min_val = (min_val<rbm->vis[k+ind_vis])?min_val:rbm->vis[k+ind_vis];
-                    max_val = (max_val>rbm->vis[k+ind_vis])?max_val:rbm->vis[k+ind_vis];
-                }
-            }
-            for(long x=0,k=0;x<nx;x++)
-            {
-                for(long y=0;y<ny;y++,k++)
-                {
-                    std::cout << (((rbm->vis[k+ind_vis]-min_val)/(max_val-min_val)>0.5)?'*':'.');
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-        }
-        for(long t=0;t<1;t++)
-        {
-            double min_val = 0;
-            double max_val = 0;
-            for(long x=0,k=0;x<dx;x++)
-            {
-                for(long y=0;y<dy;y++,k++)
-                {
-                    min_val = (min_val<rbm->hid[k+dx*dy*t+ind_hid])?min_val:rbm->hid[k+dx*dy*t+ind_hid];
-                    max_val = (max_val>rbm->hid[k+dx*dy*t+ind_hid])?max_val:rbm->hid[k+dx*dy*t+ind_hid];
-                }
-            }
-            for(long x=0,k=0;x<dx;x++)
-            {
-                for(long y=0;y<dy;y++,k++)
-                {
-                    std::cout << (((rbm->hid[k+dx*dy*t+ind_hid]-min_val)/(max_val-min_val)>0.5)?'*':'.');
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-        }
-        //for(long x=0,k=0;x<kx;x++)
-        //{
-        //    for(long y=0;y<ky;y++,k++)
-        //    {
-        //        std::cout << rbm->W[k] << '\t';
-        //    }
-        //    std::cout << std::endl;
-        //}
-        //std::cout << std::endl;
-        //for(long x=0,k=0;x<kx;x++)
-        //{
-        //    for(long y=0;y<ky;y++,k++)
-        //    {
-        //        std::cout << rbm->dW[k] << '\t';
-        //    }
-        //    std::cout << std::endl;
-        //}
-        std::cout << std::endl;
-        std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
-      }
-    }
+    VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
+    viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm
+                                                              , new CRBMConvolutionProbe < double > ( rbm )
+                                                              , -.5 , .5
+                                                              ,  -1 , 1
+                                                              );
+    addDisplay ( viz_crbm_kernel );
+
+    VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
+    viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm
+                                                              , new CRBMConvolutionProbe < double > ( rbm )
+                                                              ,  .5 , 1
+                                                              ,  -1 , 1
+                                                              );
+    addDisplay ( viz_crbm_hidden );
   }
   else
   {
     std::cout << "Please specify input name [bmp format]." << std::endl;
     exit(1);
   }
-    std::cout << "Done!" << std::endl;
+
+  new boost::thread(train);
+
+  startGraphics(argc,argv,"CRBM");
+  std::cout << "Done!" << std::endl;
   return 0;
 }
 
