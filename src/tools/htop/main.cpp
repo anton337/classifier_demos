@@ -4,10 +4,13 @@
 #include <numeric>
 #include <unistd.h>
 #include <vector>
+#include <sys/sysinfo.h>
+
+size_t nprocs = get_nprocs();
  
 std::vector<std::vector<size_t> > load_cpu_times() {
     std::ifstream proc_stat("/proc/stat");
-    std::vector<std::vector<size_t> > times(32+1);
+    std::vector<std::vector<size_t> > times(nprocs+1);
     for(size_t t=0;t<times.size();t++)
     {
         std::string line;
@@ -28,8 +31,8 @@ bool get_cpu_times(size_t &idle_time, size_t &total_time,std::vector<std::vector
 }
  
 int main(int, char *[]) {
-    std::vector<size_t> previous_idle_time(32+1);
-    std::vector<size_t> previous_total_time(32+1);
+    std::vector<size_t> previous_idle_time(nprocs+1);
+    std::vector<size_t> previous_total_time(nprocs+1);
     for(size_t t=0;t<previous_idle_time.size();t++)
     {
         previous_idle_time[t] = 0;
@@ -41,21 +44,28 @@ int main(int, char *[]) {
         std::cout << "\x1B[2J\x1B[H";
         std::cout << "\033[" << 32 << "m";
         cpu_times = load_cpu_times();
+        for(size_t i=0;i<W+2;i++)
+        {
+            std::cout << "~";
+        }
+        std::cout << std::endl;
         for(size_t t=1;t<previous_idle_time.size();t++)
         {
             get_cpu_times(idle_time, total_time, cpu_times, t);
             const float idle_time_delta = idle_time - previous_idle_time[t];
             const float total_time_delta = total_time - previous_total_time[t];
             const float utilization = (1.0 - idle_time_delta / total_time_delta);
-            for(size_t i=0;i<W*utilization;i++)
+            std::cout << '|';
+            for(size_t i=0;i<W;i++)
             {
-                std::cout << '#';
+                std::cout << ((i<W*utilization)?'#':' ');
             }
+            std::cout << '|';
             std::cout << '\n';
             previous_idle_time[t] = idle_time;
             previous_total_time[t] = total_time;
         }
-        for(size_t i=0;i<W;i++)
+        for(size_t i=0;i<W+2;i++)
         {
             std::cout << "~";
         }
@@ -66,14 +76,21 @@ int main(int, char *[]) {
             const float idle_time_delta = idle_time - previous_idle_time[t];
             const float total_time_delta = total_time - previous_total_time[t];
             const float utilization = (1.0 - idle_time_delta / total_time_delta);
-            for(size_t i=0;i<W*utilization;i++)
+            std::cout << '|';
+            for(size_t i=0;i<W;i++)
             {
-                std::cout << '#';
+                std::cout << ((i<W*utilization)?'#':' ');
             }
+            std::cout << '|';
             std::cout << '\n';
             previous_idle_time[t] = idle_time;
             previous_total_time[t] = total_time;
         }
+        for(size_t i=0;i<W+2;i++)
+        {
+            std::cout << "~";
+        }
+        std::cout << std::endl;
         std::cout << "\033[" << 49 << "m";
     }
     return 0;

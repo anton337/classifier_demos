@@ -7,7 +7,7 @@ template<typename T>
 struct VisualizeDataArray : public Display < T >
 {
 
-    double * viz_dat;
+    T * viz_dat;
     
     long viz_selection;
     

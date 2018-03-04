@@ -93,7 +93,7 @@ struct CRBMConvolutionProbe
           for(long x=0;x<crbm->nx;x++)
             for(long y=0;y<crbm->ny;y++,k++,t++)
             {
-              input_dat[t] = crbm->vis[k];
+              input_dat[t] = fabs(crbm->vis[k] - crbm->vis0[k]);
             }
         }
     }

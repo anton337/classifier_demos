@@ -12,36 +12,74 @@ void clear()
 
 ConvolutionalRBM<double> * rbm = NULL;
 
-long nx = 20;
-long ny = 20;
-long kx = 5;
-long ky = 5;
+ConvolutionalRBM<double> * rbm2 = NULL;
+
+long nx = 32;
+long ny = 32;
+long kx = 3;
+long ky = 3;
+long kx2 = 5;
+long ky2 = 5;
 long dx = nx-2*(kx/2);
 long dy = ny-2*(ky/2);
-long M = 2;
-long K = 16+1;
+long dx2 = dx-2*(kx2/2);
+long dy2 = dy-2*(ky2/2);
+long M = 1;
+long K = 8+1;
+long K2 = 16+1;
 long n = 8;
 
 void train()
 {
-    double eps = 1e-3;
-    bool init = true;
-    double init_error;
-    for(long i=0;;i++)
+  while(CONTINUE)
+  {
+  
     {
-      rbm -> init(0);
-      rbm -> cd(10,eps,0);
-      if(init)
+      double eps = 1e-4;
+      bool init = true;
+      double init_error;
+      double prev_error;
+      init = true;
+      for(long i=0;i<1000&&CONTINUE;i++)
       {
-        init = false;
-        init_error = rbm->final_error;
-      }
-      if(i%100==0)
-      {
-        std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+        rbm2 -> init(0);
+        rbm2 -> cd(1,eps,0);
+        if(init)
+        {
+          init = false;
+          init_error = rbm2->final_error;
+        }
+        if(i%100==0)
+        {
+          std::cout << n << '\t' << init_error << '\t' << rbm2 -> final_error << std::endl;
+        }
       }
     }
 
+    /*
+    {
+      double eps = 1e-2;
+      bool init = true;
+      double init_error;
+      init = true;
+      for(long i=0;i<1000;i++)
+      {
+        rbm -> init(0);
+        rbm -> cd(1,eps,0);
+        if(init)
+        {
+          init = false;
+          init_error = rbm->final_error;
+        }
+        if(i%100==0)
+        {
+          std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+        }
+      }
+    }
+    */
+
+  }
 }
 
 int main(int argc,char ** argv)
@@ -69,17 +107,13 @@ int main(int argc,char ** argv)
     double * dat = new double[M*n*nx*ny];
     for(long i=0,k=0;i<n;i++)
     {
-      long ind_1 = rand()%(full_n-1);
-      long ind_2 = ind_1+1;
+      long ind_1 = i;
         for(long m=0;m<M;m++)
         for(long x=0;x<nx;x++)
         {
             for(long y=0;y<ny;y++,k++)
             {
-              if(m==0)
-                dat[k] = dat_full[ind_1*nx*ny+x*ny+y];
-              else
-                dat[k] = dat_full[ind_2*nx*ny+x*ny+y];
+                dat[k] = dat_full[(ind_1+m)*nx*ny+x*ny+y];
             }
         }
     }
@@ -97,29 +131,90 @@ int main(int argc,char ** argv)
                                        , dat
                                        );
 
-    VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
-    viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm
-                                                                , new CRBMConvolutionProbe < double > ( rbm )
-                                                                , -1 , -.5
-                                                                , -1 , 1
-                                                                );
-    addDisplay ( viz_crbm_visible );
+    double eps = 1e-2;
+    bool init = true;
+    double init_error;
+    init = true;
+    for(long i=0;i<1000;i++)
+    {
+      rbm -> init(0);
+      rbm -> cd(10,eps,0);
+      if(init)
+      {
+        init = false;
+        init_error = rbm->final_error;
+      }
+      if(i%100==0)
+      {
+        std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+      }
+    }
 
-    VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
-    viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm
-                                                              , new CRBMConvolutionProbe < double > ( rbm )
-                                                              , -.5 , .5
-                                                              ,  -1 , 1
-                                                              );
-    addDisplay ( viz_crbm_kernel );
+    rbm2 = new ConvolutionalRBM<double> ( K*dx*dy
+                                        , K2*dx2*dy2
+                                        , dx
+                                        , dy
+                                        , dx2
+                                        , dy2
+                                        , kx2
+                                        , ky2
+                                        , K
+                                        , K2
+                                        , n
+                                        , rbm->hid
+                                        , false
+                                        );
+    {
+        VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
+        viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm
+                                                                    , new CRBMConvolutionProbe < double > ( rbm )
+                                                                    , -1 , -.75
+                                                                    , -1 , 1
+                                                                    );
+        addDisplay ( viz_crbm_visible );
 
-    VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
-    viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm
-                                                              , new CRBMConvolutionProbe < double > ( rbm )
-                                                              ,  .5 , 1
-                                                              ,  -1 , 1
-                                                              );
-    addDisplay ( viz_crbm_hidden );
+        VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
+        viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm
+                                                                  , new CRBMConvolutionProbe < double > ( rbm )
+                                                                  , -.75 , -.25
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_kernel );
+
+        VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
+        viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm
+                                                                  , new CRBMConvolutionProbe < double > ( rbm )
+                                                                  ,  -.25 , 0
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_hidden );
+    }
+
+    {
+        VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
+        viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm2
+                                                                    , new CRBMConvolutionProbe < double > ( rbm2 )
+                                                                    , 0 , .25
+                                                                    , -1 , 1
+                                                                    );
+        addDisplay ( viz_crbm_visible );
+
+        VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
+        viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm2
+                                                                  , new CRBMConvolutionProbe < double > ( rbm2 )
+                                                                  , .25 , .75
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_kernel );
+
+        VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
+        viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm2
+                                                                  , new CRBMConvolutionProbe < double > ( rbm2 )
+                                                                  ,  .75 , 1
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_hidden );
+    }
   }
   else
   {

@@ -390,6 +390,7 @@ struct ConvolutionalRBM
                    , long _K
                    , long _n
                    , T* _X
+                   , bool gabor = true
                    )
   {
     //for(long k=0;k<100;k++)
@@ -426,22 +427,25 @@ struct ConvolutionalRBM
     for(long m=0,i=0;m<M;m++)
     for(long k=0;k<K;k++)
     {
-      if(k==0)
+      if(k==0 || gabor==false)
       {
         for(long x=0,j=0;x<kx;x++)
         for(long y=0;y<ky;y++,i++,j++)
         {
             W[i] = (x==kx/2&&y==ky/2)?1.0/M:0;
+            if(gabor==false && m!=k)
+            W[i] = ((0.01/M)*(1.0 - 2*(rand()%10000)/10000.0f));
         }
       }
       else
       {
-        long J = 1 + 2*(k-1)/(K-1);
+        //long J = 1 + 2*(k-1)/(K-1);
+        long J = 1;
         std::cout << J << std::endl;
         T * gab = Gabor < T > ( kx                          // nx
                               , ky                          // ny
                               , (double)kx/J                // lambda
-                              , 4*M_PI*(double)(k-1)/(K-1)  // theta
+                              , 2*M_PI*(double)(k-1)/(K-1)  // theta
                               , M_PI/2                      // phi
                               , (double)kx/2                // sigma
                               , 1.0                         // gamma

@@ -7,7 +7,7 @@ template<typename T>
 struct VisualizeDataArrayColor : public Display < T >
 {
 
-    double * viz_dat;
+    T * viz_dat;
     
     long viz_selection;
     

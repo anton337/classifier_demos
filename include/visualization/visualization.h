@@ -18,8 +18,13 @@ bool change_pos_index  = false;
 bool change_neg_index  = false;
 bool change_up_index   = false;
 bool change_down_index = false;
+bool CONTINUE = true;
 
+#ifndef FLOAT_DISPLAY
 std::vector < Display < double > * > displays;
+#else
+std::vector < Display < float  > * > displays;
+#endif
 
 template<typename T>
 void addDisplay(Display<T> * display)
@@ -84,6 +89,7 @@ void keyboard(unsigned char Key, int x, int y)
 {
   switch(Key)
   {
+    case ' ':CONTINUE=false;break;
     case 'd':change_pos_index=true;break;
     case 'a':change_neg_index=true;break;
     case 'w':change_up_index=true;break;
@@ -100,14 +106,38 @@ void keyboard(unsigned char Key, int x, int y)
   };
 }
 
-void startGraphics(int argc,char**argv,std::string title)
+int mouse_x = -1;
+int mouse_y = -1;
+bool left_selected = false;
+bool right_selected = false;
+
+void OnMouseClick(int button, int state, int x, int y)
+{
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) 
+  { 
+    std::cout << x << '\t' << y << std::endl;
+    mouse_x = x;
+    mouse_y = y;
+    left_selected = true;
+  } 
+  if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) 
+  { 
+    mouse_x = x;
+    mouse_y = y;
+    right_selected = true;
+  } 
+}
+
+void startGraphics(int argc,char**argv,std::string title,int winx=400,int winy=400)
 {
   glutInit(&argc, argv);
+  glutInitWindowSize(winx,winy);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutCreateWindow(title.c_str());
   glutDisplayFunc(display);
   glutIdleFunc(idle);
   glutKeyboardFunc(keyboard);
+  glutMouseFunc(OnMouseClick);
   init();
   glutMainLoop();
 }
