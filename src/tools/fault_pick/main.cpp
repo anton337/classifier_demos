@@ -4,6 +4,7 @@
 #include "best_fit_plane.h"
 #define FLOAT_DISPLAY
 #include "visualization.h"
+#include "dtw.h"
 
 std::string filename_dat = "/home/antonk/data/oxy.hdr";
 std::string filename_afi = "/home/antonk/data/afi.hdr";
@@ -31,6 +32,12 @@ float * dat_slice_m2 = new float[3*probex*probey];
 float * dat_slice_m1 = new float[3*probex*probey];
 float * dat_slice_p1 = new float[3*probex*probey];
 float * dat_slice_p2 = new float[3*probex*probey];
+float * dat_p1 = new float[probex*probey];
+float * dat_m1 = new float[probex*probey];
+float * dat_dtw_tmp = new float[probex*probey];
+float * dat_dtw = new float[3*probex*probey];
+float * dat_dtw_rev_tmp = new float[probex*probey];
+float * dat_dtw_rev = new float[3*probex*probey];
 
 long x = 0;
 bool do_load = true;
@@ -153,29 +160,29 @@ void load()
             long Z = p.z;
             if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
             {
-              dat_slice_p2[probex*probey*0+k] = ((_x+probex)%100>5&&(_y+probey)%100>5)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+              dat_slice_p2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
               dat_slice_p2[probex*probey*1+k] = dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)];
               dat_slice_p2[probex*probey*2+k] = dat_flipped[ny*nz*2+(Y+(nz-1-Z)*ny)];
             }
           }
           {
-            long X = p.x + 5*fit.normx;
-            long Y = p.y + 5*fit.normy;
+            long X = p.x + 7*fit.normx;
+            long Y = p.y + 7*fit.normy;
             long Z = p.z;
             if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
             {
-              dat_slice_p1[probex*probey*0+k] = ((_x+probex)%100>5&&(_y+probey)%100>5)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+              dat_slice_p1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
               dat_slice_p1[probex*probey*1+k] = dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)];
               dat_slice_p1[probex*probey*2+k] = dat_flipped[ny*nz*2+(Y+(nz-1-Z)*ny)];
             }
           }
           {
-            long X = p.x - 5*fit.normx;
-            long Y = p.y - 5*fit.normy;
+            long X = p.x - 7*fit.normx;
+            long Y = p.y - 7*fit.normy;
             long Z = p.z;
             if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
             {
-              dat_slice_m1[probex*probey*0+k] = ((_x+probex)%100>5&&(_y+probey)%100>5)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+              dat_slice_m1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
               dat_slice_m1[probex*probey*1+k] = dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)];
               dat_slice_m1[probex*probey*2+k] = dat_flipped[ny*nz*2+(Y+(nz-1-Z)*ny)];
             }
@@ -186,11 +193,56 @@ void load()
             long Z = p.z;
             if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
             {
-              dat_slice_m2[probex*probey*0+k] = ((_x+probex)%100>5&&(_y+probey)%100>5)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+              dat_slice_m2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
               dat_slice_m2[probex*probey*1+k] = dat_flipped[ny*nz*1+(Y+(nz-1-Z)*ny)];
               dat_slice_m2[probex*probey*2+k] = dat_flipped[ny*nz*2+(Y+(nz-1-Z)*ny)];
             }
           }
+        }
+        for(long _x=0,k=0;_x<probex;_x++)
+        for(long _y=0;_y<probey;_y++,k++)
+        {
+          dat_p1[_x+probex*_y] = dat_slice_p1[probex*probey+k];
+          dat_m1[_x+probex*_y] = dat_slice_m1[probex*probey+k];
+        }
+        std::vector<int> indices;
+        for(long i=0;i<probex;i++)
+        {
+          indices.push_back(i);
+        }
+        dtw_cpu ( indices
+                , 1
+                , probey
+                , 5
+                , dat_m1
+                , dat_p1
+                , dat_dtw_tmp
+                );
+        for(long _x=0,k=0;_x<probex;_x++)
+        for(long _y=0;_y<probey;_y++,k++)
+        {
+          dat_dtw_tmp[k] /= 10;
+          dat_dtw_tmp[k] += 0.5;
+          dat_dtw[_x+_y*probex]                 = dat_dtw_tmp[k];
+          dat_dtw[_x+_y*probex+probex*probey]   = dat_dtw_tmp[k];
+          dat_dtw[_x+_y*probex+2*probex*probey] = dat_dtw_tmp[k];
+        }
+        dtw_cpu ( indices
+                , 1
+                , probey
+                , 5
+                , dat_p1
+                , dat_m1
+                , dat_dtw_rev_tmp
+                );
+        for(long _x=0,k=0;_x<probex;_x++)
+        for(long _y=0;_y<probey;_y++,k++)
+        {
+          dat_dtw_rev_tmp[k] /= 10;
+          dat_dtw_rev_tmp[k] += 0.5;
+          dat_dtw_rev[_x+_y*probex]                 = dat_dtw_rev_tmp[k];
+          dat_dtw_rev[_x+_y*probex+probex*probey]   = dat_dtw_rev_tmp[k];
+          dat_dtw_rev[_x+_y*probex+2*probex*probey] = dat_dtw_rev_tmp[k];
         }
       }
     }
@@ -229,7 +281,7 @@ int main(int argc,char ** argv)
                                                           , 3*probex*probey
                                                           , probex
                                                           , probey
-                                                          , dat_slice_p2
+                                                          , dat_dtw_rev
                                                           , 0 , .5 , 0 , 1
                                                           );
     viz_slice_dat4 = new VisualizeDataArrayColor < float > ( 3*probex*probey
@@ -237,7 +289,7 @@ int main(int argc,char ** argv)
                                                            , 3*probex*probey
                                                            , probex
                                                            , probey
-                                                           , dat_slice_m2
+                                                           , dat_dtw
                                                            , .5 , 1 , 0 , 1
                                                            );
     addDisplay ( viz_in_dat );
