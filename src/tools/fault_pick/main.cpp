@@ -117,7 +117,7 @@ void load()
       left_selected = false;
       float X = x;
       float Z = view_minz + ((float)view_widthz/(float)nz)*nz*((float)mouse_y/winy);
-      float Y = view_miny + ((float)view_widthy/(float)ny)*ny*(2*(float)mouse_x/winx);
+      float Y = view_miny + ((float)view_widthy/(float)ny)*ny*(((float)winx/winy)*((float)mouse_x/winx));
       std::cout << X << '\t' << Y << '\t' << Z << std::endl;
       pts.push_back(Point<float>(X,Y,Z));
       fit.init(pts);
@@ -334,6 +334,15 @@ void load()
   }
 }
 
+void reshape ( int width, int height ) {
+    height = width / 2;
+    winx = width;
+    winy = height;
+        /* define the viewport transformation */
+        glViewport(0,0,width,height);
+
+}
+
 int main(int argc,char ** argv)
 {
     std::cout << "Fault Pick Tool." << std::endl;
@@ -383,7 +392,19 @@ int main(int argc,char ** argv)
     addDisplay ( viz_slice_dat3 );
     addDisplay ( viz_slice_dat4 );
     new boost::thread(load);
-    startGraphics(argc,argv,"Picker",winx,winy);
+
+    glutInit(&argc, argv);
+    glutInitWindowSize(winx,winy);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutCreateWindow("DTW");
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutIdleFunc(idle);
+    glutKeyboardFunc(keyboard);
+    glutSpecialFunc(specialInput);
+    glutMouseFunc(OnMouseClick);
+    init();
+    glutMainLoop();
     std::cout << "Finished." << std::endl;
     return 0;
 }

@@ -73,7 +73,7 @@ void init(void)
 {
   /* Use depth buffering for hidden surface elimination. */
   glEnable(GL_DEPTH_TEST);
-
+  glLoadIdentity();
   /* Setup the view of the cube. */
   glMatrixMode(GL_PROJECTION);
   gluPerspective( /* field of view in degree */ 40.0,
