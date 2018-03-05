@@ -52,7 +52,7 @@ void dtw_cpu ( std::vector<int> indices
     }
 
 
-    int inter = 2;
+    int inter = 0;
     int min_toggle = -1;
     int s1,s2;
     int L,L_1,L_2;

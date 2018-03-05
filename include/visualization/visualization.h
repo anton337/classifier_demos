@@ -106,6 +106,56 @@ void keyboard(unsigned char Key, int x, int y)
   };
 }
 
+bool key_up     = false;
+bool key_down   = false;
+bool key_left   = false;
+bool key_right  = false;
+
+bool key_UP     = false;
+bool key_DOWN   = false;
+bool key_LEFT   = false;
+bool key_RIGHT  = false;
+
+void specialInput(int key,int x,int y)
+{
+    switch(key)
+    {
+        case GLUT_KEY_UP    : 
+            {
+                if(glutGetModifiers() == GLUT_ACTIVE_SHIFT) 
+                    key_UP    = true; 
+                else
+                    key_up    = true;
+                break;
+            }
+        case GLUT_KEY_DOWN  : 
+            {
+                if(glutGetModifiers() == GLUT_ACTIVE_SHIFT) 
+                    key_DOWN  = true;
+                else
+                    key_down  = true;
+                break;
+            }
+        case GLUT_KEY_LEFT  : 
+            {
+                if(glutGetModifiers() == GLUT_ACTIVE_SHIFT) 
+                    key_LEFT  = true;
+                else
+                    key_left  = true;
+                break;
+            }
+        case GLUT_KEY_RIGHT : 
+            {
+                if(glutGetModifiers() == GLUT_ACTIVE_SHIFT) 
+                    key_RIGHT = true;
+                else
+                    key_right = true;
+                break;
+            }
+        default: break;
+    }
+}
+
 int mouse_x = -1;
 int mouse_y = -1;
 bool left_selected = false;
@@ -137,6 +187,7 @@ void startGraphics(int argc,char**argv,std::string title,int winx=400,int winy=4
   glutDisplayFunc(display);
   glutIdleFunc(idle);
   glutKeyboardFunc(keyboard);
+  glutSpecialFunc(specialInput);
   glutMouseFunc(OnMouseClick);
   init();
   glutMainLoop();
