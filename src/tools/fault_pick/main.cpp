@@ -122,6 +122,15 @@ void load()
       pts.push_back(Point<float>(X,Y,Z));
       fit.init(pts);
       do_load = true;
+      for(long k=0;k<3*probex*probey;k++)
+      {
+        dat_slice_m2[k] = 0;
+        dat_slice_m1[k] = 0;
+        dat_slice_p1[k] = 0;
+        dat_slice_p2[k] = 0;
+        dat_dtw[k] = 0;
+        dat_dtw_rev[k] = 0;
+      }
     }
     if(right_selected)
     {
@@ -129,6 +138,15 @@ void load()
       do_load = true;
       pts.clear();
       fit.init(pts);
+      for(long k=0;k<3*probex*probey;k++)
+      {
+        dat_slice_m2[k] = 0;
+        dat_slice_m1[k] = 0;
+        dat_slice_p1[k] = 0;
+        dat_slice_p2[k] = 0;
+        dat_dtw[k] = 0;
+        dat_dtw_rev[k] = 0;
+      }
     }
     if(change_pos_index)
     {
@@ -198,7 +216,7 @@ void load()
                 dat_flipped[ny*nz*0+(_y+(nz-1-_z)*ny)] = r;
                 dat_flipped[ny*nz*1+(_y+(nz-1-_z)*ny)] = g;
                 dat_flipped[ny*nz*2+(_y+(nz-1-_z)*ny)] = b;
-                if(pts.size()>3)
+                if(pts.size()>=3)
                 if ( fit.distance(x,y,z) < 1 
                   && (x-fit.anchorx)*(x-fit.anchorx) 
                    + (y-fit.anchory)*(y-fit.anchory) 
@@ -232,55 +250,73 @@ void load()
         }
       }
       
-      if(pts.size()>3)
+      if(pts.size()>=3)
       {
         for(long _x=0,k=0;_x<probex;_x++)
         for(long _y=0;_y<probey;_y++,k++)
         {
-          Point<float> p = fit.get_projection(1*(_y-probey/2),1*(_x-probex/2));
+          Point<float> pt = fit.get_projection((_y-probey/2),(_x-probex/2));
+          if(fit.is_inside(pt))
           {
-            long X = p.x + 10*fit.normx;
-            long Y = p.y + 10*fit.normy;
-            long Z = p.z;
-            if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+            //Point<float> p = pt;
+            Point<float> p;
+            fit.get_projection(pt,p);
+            //{
+            //  long X = p.x + 10*fit.normx;
+            //  long Y = p.y + 10*fit.normy;
+            //  long Z = p.z;
+            //  if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+            //  {
+            //    dat_slice_p2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+            //    dat_slice_p2[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
+            //    dat_slice_p2[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
+            //  }
+            //}
             {
-              dat_slice_p2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-              dat_slice_p2[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-              dat_slice_p2[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
+              long X = p.x + 10*fit.normx;
+              long Y = p.y + 10*fit.normy;
+              long Z = p.z;
+              if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+              {
+                dat_slice_p1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+                dat_slice_p1[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
+                dat_slice_p1[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
+                long _Y = ((float)Y - view_miny) * facty;
+                long _Z = ((float)Z - view_minz) * factz;
+                for(long __y=_Y-W;__y<=_Y+W;__y++)
+                for(long __z=_Z-W;__z<=_Z+W;__z++)
+                if(__y>=0&&__y<ny&&__z>=0&&__z<nz)
+                dat_flipped[ny*nz*0+(__y+(nz-1-__z)*ny)] = 1;
+              }
             }
-          }
-          {
-            long X = p.x + 10*fit.normx;
-            long Y = p.y + 10*fit.normy;
-            long Z = p.z;
-            if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
             {
-              dat_slice_p1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-              dat_slice_p1[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-              dat_slice_p1[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
+              long X = p.x - 10*fit.normx;
+              long Y = p.y - 10*fit.normy;
+              long Z = p.z;
+              if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+              {
+                dat_slice_m1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+                dat_slice_m1[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
+                dat_slice_m1[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
+                long _Y = ((float)Y - view_miny) * facty;
+                long _Z = ((float)Z - view_minz) * factz;
+                for(long __y=_Y-W;__y<=_Y+W;__y++)
+                for(long __z=_Z-W;__z<=_Z+W;__z++)
+                if(__y>=0&&__y<ny&&__z>=0&&__z<nz)
+                dat_flipped[ny*nz*0+(__y+(nz-1-__z)*ny)] = 1;
+              }
             }
-          }
-          {
-            long X = p.x - 10*fit.normx;
-            long Y = p.y - 10*fit.normy;
-            long Z = p.z;
-            if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
-            {
-              dat_slice_m1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-              dat_slice_m1[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-              dat_slice_m1[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
-            }
-          }
-          {
-            long X = p.x - 10*fit.normx;
-            long Y = p.y - 10*fit.normy;
-            long Z = p.z;
-            if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
-            {
-              dat_slice_m2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-              dat_slice_m2[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-              dat_slice_m2[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
-            }
+            //{
+            //  long X = p.x - 10*fit.normx;
+            //  long Y = p.y - 10*fit.normy;
+            //  long Z = p.z;
+            //  if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+            //  {
+            //    dat_slice_m2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
+            //    dat_slice_m2[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
+            //    dat_slice_m2[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
+            //  }
+            //}
           }
         }
         for(long _x=0,k=0;_x<probex;_x++)

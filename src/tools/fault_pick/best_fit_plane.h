@@ -84,6 +84,16 @@ struct BestFitPlane
                     );
   }
 
+  bool is_inside ( Point<T> const & p )
+  {
+    return triangulation.is_inside(p.x,p.y,p.z,normx,normy,normz);
+  }
+
+  void get_projection ( Point<T> const & pt , Point<T> & p )
+  {
+    return triangulation.get_projection(pt.x,pt.y,pt.z,normx,normy,normz,p.x,p.y,p.z);
+  }
+
 };
 
 #endif
