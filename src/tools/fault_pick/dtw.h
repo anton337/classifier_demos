@@ -1,13 +1,21 @@
 #ifndef DTW_H
 #define DTW_H
 
+float metric(float a,float b)
+{
+    return (a-b)*(a-b);
+}
+
 void dtw_cpu ( std::vector<int> indices
              , int n
              , int p_num_samp
              , int win
+             , float * win_factor // 2 * win + 1
              , float * p_A
              , float * p_B
              , float * p_S
+             , int probe
+             , float * p_E
              )
 {
 
@@ -53,6 +61,7 @@ void dtw_cpu ( std::vector<int> indices
 
 
     int inter = 0;
+    int inter_w = 0;
     int min_toggle = -1;
     int s1,s2;
     int L,L_1,L_2;
@@ -102,15 +111,25 @@ void dtw_cpu ( std::vector<int> indices
                 dist[L][w] = 0;
               }
               toggle[l][w] = min_toggle;
-              for(int k=-inter;k<=inter;k++)
+              int count = 0;
+              for(int j=-inter_w;j<=inter_w;j++)
               {
-                int count = 0;
-                if (s1+k>=0&&s1+k<length&&s2+k>=0&&s2+k<length)
+                if(i+j>=0&&i+j<n)
                 {
-                count++;
-                dist[L][w] += fabs(A[s1+k]-B[s2+k]);//metric(A[s1+k],B[s2+k]);
+                  for(int k=-inter;k<=inter;k++)
+                  {
+                    if (s1+k>=0&&s1+k<length&&s2+k>=0&&s2+k<length)
+                    {
+                        count++;
+                        dist[L][w] += win_factor[w]+metric(A[j*num_samp+s1+k],B[j*num_samp+s2+k]);
+                    }
+                  }
                 }
-                dist[L][w] /= count+0.01f;
+              }
+              dist[L][w] /= count+0.01f;
+              if(i==probe)
+              {
+                  p_E[num_samp*(s1)+s2] = dist[L][w];
               }
             }
           }
@@ -157,15 +176,25 @@ void dtw_cpu ( std::vector<int> indices
                 dist[L][w] = 0;
               }
               toggle[l][w] = min_toggle;
-              for(int k=-inter;k<=inter;k++)
+              int count = 0;
+              for(int j=-inter_w;j<=inter_w;j++)
               {
-                int count = 0;
-                if (s1+k>=0&&s1+k<length&&s2+k>=0&&s2+k<length)
+                if(i+j>=0&&i+j<n)
                 {
-                count++;
-                dist[L][w] += fabs(A[s1+k]-B[s2+k]);//metric(A[s1+k],B[s2+k]);
+                  for(int k=-inter;k<=inter;k++)
+                  {
+                    if (s1+k>=0&&s1+k<length&&s2+k>=0&&s2+k<length)
+                    {
+                        count++;
+                        dist[L][w] += win_factor[w]+metric(A[j*num_samp+s1+k],B[j*num_samp+s2+k]);
+                    }
+                  }
                 }
-                dist[L][w] /= count+0.01f;
+              }
+              dist[L][w] /= count+0.01f;
+              if(i==probe)
+              {
+                  p_E[num_samp*(s1)+s2] = dist[L][w];
               }
             }
           }
@@ -210,6 +239,24 @@ void dtw_cpu ( std::vector<int> indices
         Layer--;
         Win++;
       }
+    }
+
+    if(i==probe||probe<0)
+    {
+        for(int k=0;k<num_samp;k++)
+        {
+            if(k+(int)S[k]>=0&&k+(int)S[k]<num_samp)
+            {
+                p_E[k+(int)S[k]+num_samp*k] = 1;
+            }
+        }
+    }
+
+    if(i==probe)
+    for(int k=0;k<num_samp;k++)
+    {
+        p_E[k] = p_A[i*num_samp+k];
+        p_E[num_samp*k] = p_B[i*num_samp+k];
     }
 
 

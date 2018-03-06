@@ -19,7 +19,10 @@ int nz = reader_dat.n1;
 float * dat         = new float[nz*ny];
 float * afi         = new float[nz*ny];
 float * dat_flipped = new float[3*nz*ny]; // tri color
-float * full        = new float[3*nz*ny];
+float * full        = new float[3L*nz*ny*nx];
+int WIN = 15;
+float * win_factor     = NULL;
+float * win_factor_rev = NULL;
 VisualizeDataArrayColor < float > * viz_in_dat = NULL;
 VisualizeDataArrayColor < float > * viz_slice_dat = NULL;
 VisualizeDataArrayColor < float > * viz_slice_dat2 = NULL;
@@ -29,6 +32,9 @@ int winx = 1000;
 int winy = 500;
 int probex = 300;
 int probey = 300;
+int probe  = probex/2;
+int probe_samp  = probey/2;
+float * dat_dtw_energy = new float[3*probex*probey];
 float * dat_slice_m2 = new float[3*probex*probey];
 float * dat_slice_m1 = new float[3*probex*probey];
 float * dat_slice_p1 = new float[3*probex*probey];
@@ -39,6 +45,9 @@ float * dat_dtw_tmp = new float[probex*probey];
 float * dat_dtw = new float[3*probex*probey];
 float * dat_dtw_rev_tmp = new float[probex*probey];
 float * dat_dtw_rev = new float[3*probex*probey];
+
+float min_val = 100000000;
+float max_val =-100000000;
 
 int view_miny = 0;
 int view_minz = 0;
@@ -115,21 +124,33 @@ void load()
     if(left_selected)
     {
       left_selected = false;
-      float X = x;
-      float Z = view_minz + ((float)view_widthz/(float)nz)*nz*((float)mouse_y/winy);
-      float Y = view_miny + ((float)view_widthy/(float)ny)*ny*(((float)winx/winy)*((float)mouse_x/winx));
-      std::cout << X << '\t' << Y << '\t' << Z << std::endl;
-      pts.push_back(Point<float>(X,Y,Z));
-      fit.init(pts);
-      do_load = true;
-      for(long k=0;k<3*probex*probey;k++)
+      if((float)mouse_x/winy <= 1.0)
       {
-        dat_slice_m2[k] = 0;
-        dat_slice_m1[k] = 0;
-        dat_slice_p1[k] = 0;
-        dat_slice_p2[k] = 0;
-        dat_dtw[k] = 0;
-        dat_dtw_rev[k] = 0;
+        float X = x;
+        float Z = view_minz + ((float)view_widthz/(float)nz)*nz*((float)mouse_y/winy);
+        float Y = view_miny + ((float)view_widthy/(float)ny)*ny*(((float)winx/winy)*((float)mouse_x/winx));
+        std::cout << X << '\t' << Y << '\t' << Z << std::endl;
+        pts.push_back(Point<float>(X,Y,Z));
+        fit.init(pts);
+        do_load = true;
+        for(long k=0;k<3*probex*probey;k++)
+        {
+          dat_slice_m2[k] = 0;
+          dat_slice_m1[k] = 0;
+          dat_slice_p1[k] = 0;
+          dat_slice_p2[k] = 0;
+          dat_dtw[k] = 0;
+          dat_dtw_rev[k] = 0;
+          dat_dtw_energy[k] = 0;
+        }
+      }
+      else
+      {
+        std::cout << "Not clicking" << std::endl;
+        probe = (int)(2*probex*(((float)mouse_x - winy)/winy))%probex;
+        probe_samp = (int)(2*probey - 2*probey*((float)mouse_y/winy))%probey;
+        std::cout << "probe:" << probe << '\t' << probe_samp << std::endl;
+        do_load = true;
       }
     }
     if(right_selected)
@@ -146,6 +167,7 @@ void load()
         dat_slice_p2[k] = 0;
         dat_dtw[k] = 0;
         dat_dtw_rev[k] = 0;
+        dat_dtw_energy[k] = 0;
       }
     }
     if(change_pos_index)
@@ -185,8 +207,6 @@ void load()
                              , reader_dat.n2
                              , 1 // reader.n3
                              );
-      float min_val = 100000000;
-      float max_val =-100000000;
       for(long k=0;k<ny*nz;k++)
       {
         min_val = (dat[k]<min_val)?dat[k]:min_val;
@@ -202,9 +222,9 @@ void load()
           r = (dat[k]-min_val)/(max_val-min_val);
           g = r;
           b = afi[k];
-          full[ny*nz*0+(y+(nz-1-z)*ny)] = r;
-          full[ny*nz*1+(y+(nz-1-z)*ny)] = g;
-          full[ny*nz*2+(y+(nz-1-z)*ny)] = b;
+          full[3L*ny*nz*x+ny*nz*0+(y+(nz-1-z)*ny)] = r;
+          full[3L*ny*nz*x+ny*nz*1+(y+(nz-1-z)*ny)] = g;
+          full[3L*ny*nz*x+ny*nz*2+(y+(nz-1-z)*ny)] = b;
           Y = ((float)y - view_miny) * facty;
           Z = ((float)z - view_minz) * factz;
           if(Y>=0&&Y<ny&&Z>=0&&Z<nz)
@@ -231,7 +251,7 @@ void load()
         }
       
       long X;
-      int W = 3;
+      int W = 1;
       for(long t=0;t<pts.size();t++)
       {
         X = pts[t].x;
@@ -261,62 +281,54 @@ void load()
             //Point<float> p = pt;
             Point<float> p;
             fit.get_projection(pt,p);
-            //{
-            //  long X = p.x + 10*fit.normx;
-            //  long Y = p.y + 10*fit.normy;
-            //  long Z = p.z;
-            //  if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
-            //  {
-            //    dat_slice_p2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-            //    dat_slice_p2[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-            //    dat_slice_p2[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
-            //  }
-            //}
             {
               long X = p.x + 10*fit.normx;
               long Y = p.y + 10*fit.normy;
               long Z = p.z;
-              if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+              if(/*x==X&&*/X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
               {
-                dat_slice_p1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-                dat_slice_p1[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-                dat_slice_p1[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
-                long _Y = ((float)Y - view_miny) * facty;
-                long _Z = ((float)Z - view_minz) * factz;
-                for(long __y=_Y-W;__y<=_Y+W;__y++)
-                for(long __z=_Z-W;__z<=_Z+W;__z++)
-                if(__y>=0&&__y<ny&&__z>=0&&__z<nz)
-                dat_flipped[ny*nz*0+(__y+(nz-1-__z)*ny)] = 1;
+                dat_slice_p1[probex*probey*0+k] = (_y!=probe&&_x!=probe_samp)?(((_x+probex)%50>2&&(_y+probey)%50>2)?full[3L*ny*nz*X+ny*nz*1+(Y+(nz-1-Z)*ny)]:0):1;
+                dat_slice_p1[probex*probey*1+k] = full[3L*ny*nz*X+ny*nz*1+(Y+(nz-1-Z)*ny)];
+                dat_slice_p1[probex*probey*2+k] = full[3L*ny*nz*X+ny*nz*2+(Y+(nz-1-Z)*ny)];
+                if(x==X)
+                {
+                    long _Y = ((float)Y - view_miny) * facty;
+                    long _Z = ((float)Z - view_minz) * factz;
+                    for(long __y=_Y-W;__y<=_Y+W;__y++)
+                    for(long __z=_Z-W;__z<=_Z+W;__z++)
+                    if(__y>=0&&__y<ny&&__z>=0&&__z<nz)
+                    dat_flipped[ny*nz*0+(__y+(nz-1-__z)*ny)] = 1;
+                }
+              }
+              else
+              {
+                if(_y==probe || _x==probe_samp)dat_slice_p1[probex*probey*0+k] = 1;
               }
             }
             {
               long X = p.x - 10*fit.normx;
               long Y = p.y - 10*fit.normy;
               long Z = p.z;
-              if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
+              if(/*x==X&&*/X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
               {
-                dat_slice_m1[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-                dat_slice_m1[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-                dat_slice_m1[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
-                long _Y = ((float)Y - view_miny) * facty;
-                long _Z = ((float)Z - view_minz) * factz;
-                for(long __y=_Y-W;__y<=_Y+W;__y++)
-                for(long __z=_Z-W;__z<=_Z+W;__z++)
-                if(__y>=0&&__y<ny&&__z>=0&&__z<nz)
-                dat_flipped[ny*nz*0+(__y+(nz-1-__z)*ny)] = 1;
+                dat_slice_m1[probex*probey*0+k] = (_y!=probe&&_x!=probe_samp-dat_dtw_tmp[_x+_y*probex])?(((_x+probex)%50>2&&(_y+probey)%50>2)?full[3L*ny*nz*X+ny*nz*1+(Y+(nz-1-Z)*ny)]:0):1;
+                dat_slice_m1[probex*probey*1+k] = full[3L*ny*nz*X+ny*nz*1+(Y+(nz-1-Z)*ny)];
+                dat_slice_m1[probex*probey*2+k] = full[3L*ny*nz*X+ny*nz*2+(Y+(nz-1-Z)*ny)];
+                if(x==X)
+                {
+                    long _Y = ((float)Y - view_miny) * facty;
+                    long _Z = ((float)Z - view_minz) * factz;
+                    for(long __y=_Y-W;__y<=_Y+W;__y++)
+                    for(long __z=_Z-W;__z<=_Z+W;__z++)
+                    if(__y>=0&&__y<ny&&__z>=0&&__z<nz)
+                    dat_flipped[ny*nz*0+(__y+(nz-1-__z)*ny)] = 1;
+                }
+              }
+              else
+              {
+                if(_y==probe || _x==probe_samp)dat_slice_m1[probex*probey*0+k] = 1;
               }
             }
-            //{
-            //  long X = p.x - 10*fit.normx;
-            //  long Y = p.y - 10*fit.normy;
-            //  long Z = p.z;
-            //  if(x==X&&X>=0&&X<nx&&Y>=0&&Y<ny&&Z>=0&&Z<nz)
-            //  {
-            //    dat_slice_m2[probex*probey*0+k] = ((_x+probex)%50>2&&(_y+probey)%50>2)?full[ny*nz*1+(Y+(nz-1-Z)*ny)]:0;
-            //    dat_slice_m2[probex*probey*1+k] = full[ny*nz*1+(Y+(nz-1-Z)*ny)];
-            //    dat_slice_m2[probex*probey*2+k] = full[ny*nz*2+(Y+(nz-1-Z)*ny)];
-            //  }
-            //}
           }
         }
         for(long _x=0,k=0;_x<probex;_x++)
@@ -330,30 +342,42 @@ void load()
         {
           indices.push_back(i);
         }
+        for(long i=0;i<probex*probey;i++)
+        {
+            dat_dtw_energy[i] = 0;
+        }
         dtw_cpu ( indices
-                , 1
+                , probex
                 , probey
-                , 5
+                , WIN
+                , win_factor
                 , dat_m1
                 , dat_p1
                 , dat_dtw_tmp
+                , probe
+                , dat_dtw_energy
                 );
         for(long _x=0,k=0;_x<probex;_x++)
         for(long _y=0;_y<probey;_y++,k++)
         {
-          dat_dtw_tmp[k] /= 15;
-          dat_dtw_tmp[k] += 0.5;
-          dat_dtw[_x+_y*probex]                 = dat_dtw_tmp[k];
-          dat_dtw[_x+_y*probex+probex*probey]   = dat_dtw_tmp[k];
-          dat_dtw[_x+_y*probex+2*probex*probey] = dat_dtw_tmp[k];
+          dat_dtw[_x+_y*probex]                 = 0.5 + 0.1*((_x!=probe&&_y!=probe_samp)?dat_dtw_tmp[k]:1-dat_dtw_tmp[k]);
+          dat_dtw[_x+_y*probex+probex*probey]   = 0.5 + 0.1*(dat_dtw_tmp[k]);
+          dat_dtw[_x+_y*probex+2*probex*probey] = 0.5 + 0.1*(dat_dtw_tmp[k]);
+          //dat_dtw_energy[k] *= 10;
+          dat_dtw_energy[k+probex*probey] = dat_dtw_energy[k];
+          dat_dtw_energy[k+2*probex*probey] = dat_dtw_energy[k];
         }
+        /*
         dtw_cpu ( indices
-                , 1
+                , probex
                 , probey
-                , 5
+                , WIN
+                , win_factor_rev
                 , dat_p1
                 , dat_m1
                 , dat_dtw_rev_tmp
+                , probex/2
+                , dat_dtw_energy
                 );
         for(long _x=0,k=0;_x<probex;_x++)
         for(long _y=0;_y<probey;_y++,k++)
@@ -364,6 +388,7 @@ void load()
           dat_dtw_rev[_x+_y*probex+probex*probey]   = dat_dtw_rev_tmp[k];
           dat_dtw_rev[_x+_y*probex+2*probex*probey] = dat_dtw_rev_tmp[k];
         }
+        */
       }
       
     }
@@ -382,6 +407,13 @@ void reshape ( int width, int height ) {
 int main(int argc,char ** argv)
 {
     std::cout << "Fault Pick Tool." << std::endl;
+    win_factor = new float[2*WIN+1];
+    win_factor_rev = new float[2*WIN+1];
+    for(long i=-WIN,k=0;i<=WIN;i++,k++)
+    {
+        win_factor_rev  [k] = 0;//0.005*fabs(i);//(i<0)?10:1;
+        win_factor      [k] = 0;//0.005*fabs(i);//(i>0)?10:1;
+    }
     viz_in_dat = new VisualizeDataArrayColor < float > ( 3*ny*nz
                                                        , 3*ny*nz
                                                        , 3*ny*nz
@@ -411,7 +443,7 @@ int main(int argc,char ** argv)
                                                           , 3*probex*probey
                                                           , probex
                                                           , probey
-                                                          , dat_dtw_rev
+                                                          , dat_dtw
                                                           , 0 , .5 , 0 , 1
                                                           );
     viz_slice_dat4 = new VisualizeDataArrayColor < float > ( 3*probex*probey
@@ -419,7 +451,7 @@ int main(int argc,char ** argv)
                                                            , 3*probex*probey
                                                            , probex
                                                            , probey
-                                                           , dat_dtw
+                                                           , dat_dtw_energy
                                                            , .5 , 1 , 0 , 1
                                                            );
     addDisplay ( viz_in_dat );
