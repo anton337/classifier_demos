@@ -16,25 +16,41 @@
         if (myfile.is_open())
         {
           myfile << "#v" << std::endl;
-          myfile << rbm->v << std::endl;
+          myfile << crbm->v << std::endl;
           myfile << "#h" << std::endl;
-          myfile << rbm->h << std::endl;
+          myfile << crbm->h << std::endl;
+          myfile << "#nx" << std::endl;
+          myfile << crbm->nx << std::endl;
+          myfile << "#ny" << std::endl;
+          myfile << crbm->ny << std::endl;
+          myfile << "#dx" << std::endl;
+          myfile << crbm->dx << std::endl;
+          myfile << "#dy" << std::endl;
+          myfile << crbm->dy << std::endl;
+          myfile << "#kx" << std::endl;
+          myfile << crbm->kx << std::endl;
+          myfile << "#ky" << std::endl;
+          myfile << crbm->ky << std::endl;
+          myfile << "#M" << std::endl;
+          myfile << crbm->M << std::endl;
+          myfile << "#K (a.k.a. N)" << std::endl;
+          myfile << crbm->K << std::endl;
           myfile << "#b" << std::endl;
-          for(long v=0;v<rbm->v;v++)
+          for(long v=0;v<crbm->M*crbm->nx*crbm->ny;v++)
           {
-            myfile << rbm->b[v] << " ";
+            myfile << crbm->b[v] << " ";
           }
           myfile << std::endl;
           myfile << "#c" << std::endl;
-          for(long h=0;h<rbm->h;h++)
+          for(long h=0;h<crbm->K*crbm->dx*crbm->dy;h++)
           {
-            myfile << rbm->c[h] << " ";
+            myfile << crbm->c[h] << " ";
           }
           myfile << std::endl;
           myfile << "#W" << std::endl;
-          for(long k=0;k<rbm->h*rbm->v;k++)
+          for(long k=0;k<crbm->M*crbm->K*crbm->kx*crbm->ky;k++)
           {
-            myfile << rbm->W[k] << " ";
+            myfile << crbm->W[k] << " ";
           }
           myfile << std::endl;
           myfile.close();
@@ -74,7 +90,7 @@
                 ss << line;
                 ss >> tmp;
                 int v = atoi(tmp.c_str());
-                if(v != rbm->v)
+                if(v != crbm->v)
                 {
                   std::cout << "network structure is not consistent." << std::endl;
                   exit(1);
@@ -88,7 +104,7 @@
                 ss << line;
                 ss >> tmp;
                 int h = atoi(tmp.c_str());
-                if(h != rbm->h)
+                if(h != crbm->h)
                 {
                   std::cout << "network structure is not consistent." << std::endl;
                   exit(1);
@@ -96,40 +112,152 @@
                 stage = 2;
                 break;
               }
-              case 2: // get b
+              case 2: // get nx
               {
                 std::stringstream ss;
                 ss << line;
-                for(int j=0;j<rbm->v;j++)
+                ss >> tmp;
+                int nx = atoi(tmp.c_str());
+                if(nx != crbm->nx)
                 {
-                    ss >> tmp;
-                    rbm->b[j] = atof(tmp.c_str());
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
                 }
                 stage = 3;
                 break;
               }
-              case 3: // get c
+              case 3: // get ny
               {
                 std::stringstream ss;
                 ss << line;
-                for(int j=0;j<rbm->h;j++)
+                ss >> tmp;
+                int ny = atoi(tmp.c_str());
+                if(ny != crbm->ny)
                 {
-                    ss >> tmp;
-                    rbm->c[j] = atof(tmp.c_str());
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
                 }
                 stage = 4;
                 break;
               }
-              case 4: // get W
+              case 4: // get dx
               {
                 std::stringstream ss;
                 ss << line;
-                for(int j=0;j<rbm->h*rbm->v;j++)
+                ss >> tmp;
+                int dx = atoi(tmp.c_str());
+                if(dx != crbm->dx)
                 {
-                    ss >> tmp;
-                    rbm->W[j] = atof(tmp.c_str());
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
                 }
                 stage = 5;
+                break;
+              }
+              case 5: // get dy
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int dy = atoi(tmp.c_str());
+                if(dy != crbm->dy)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 6;
+                break;
+              }
+              case 6: // get kx
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int kx = atoi(tmp.c_str());
+                if(kx != crbm->kx)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 7;
+                break;
+              }
+              case 7: // get ky
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int ky = atoi(tmp.c_str());
+                if(ky != crbm->ky)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 8;
+                break;
+              }
+              case 8: // get M
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int M = atoi(tmp.c_str());
+                if(M != crbm->M)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 9;
+                break;
+              }
+              case 9: // get K (a.k.a N)
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int K = atoi(tmp.c_str());
+                if(K != crbm->K)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 10;
+                break;
+              }
+              case 10: // get b
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<crbm->M*crbm->nx*crbm->ny;j++)
+                {
+                    ss >> tmp;
+                    crbm->b[j] = atof(tmp.c_str());
+                }
+                stage = 11;
+                break;
+              }
+              case 11: // get c
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<crbm->K*crbm->dx*crbm->dy;j++)
+                {
+                    ss >> tmp;
+                    crbm->c[j] = atof(tmp.c_str());
+                }
+                stage = 12;
+                break;
+              }
+              case 12: // get W
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<crbm->K*crbm->M*crbm->kx*crbm->ky;j++)
+                {
+                    ss >> tmp;
+                    crbm->W[j] = atof(tmp.c_str());
+                }
+                stage = 13;
                 break;
               }
               default:done = true;break;

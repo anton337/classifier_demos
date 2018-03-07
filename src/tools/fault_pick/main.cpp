@@ -7,7 +7,7 @@
 #include "dtw.h"
 
 std::string filename_dat = "/home/antonk/data/oxy.hdr";
-std::string filename_afi = "/home/antonk/data/afi.hdr";
+std::string filename_afi = "/home/antonk/data/oxy-afi.hdr";
 SEPReader reader_dat(filename_dat.c_str());
 SEPReader reader_afi(filename_afi.c_str());
 int ox = reader_dat.o3;
@@ -200,11 +200,11 @@ void load()
                              , 1 // reader.n3
                              );
       reader_afi.read_sepval ( &afi[0]
-                             , reader_dat.o1
-                             , reader_dat.o2
-                             , reader_dat.o3 + x
-                             , reader_dat.n1
-                             , reader_dat.n2
+                             , reader_afi.o1
+                             , reader_afi.o2
+                             , reader_afi.o3 + x
+                             , reader_afi.n1
+                             , reader_afi.n2
                              , 1 // reader.n3
                              );
       for(long k=0;k<ny*nz;k++)
@@ -222,6 +222,7 @@ void load()
           r = (dat[k]-min_val)/(max_val-min_val);
           g = r;
           b = afi[k];
+          if(b<0.3||z<nz/3||z>2*nz/3)b=0;else b=1;
           full[3L*ny*nz*x+ny*nz*0+(y+(nz-1-z)*ny)] = r;
           full[3L*ny*nz*x+ny*nz*1+(y+(nz-1-z)*ny)] = g;
           full[3L*ny*nz*x+ny*nz*2+(y+(nz-1-z)*ny)] = b;
