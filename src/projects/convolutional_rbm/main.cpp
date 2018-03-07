@@ -14,8 +14,10 @@ ConvolutionalRBM<double> * rbm = NULL;
 
 ConvolutionalRBM<double> * rbm2 = NULL;
 
-long nx = 32;
-long ny = 32;
+//long nx = 32;
+//long ny = 32;
+long nx = 20;
+long ny = 20;
 long kx = 3;
 long ky = 3;
 long kx2 = 5;
@@ -27,7 +29,7 @@ long dy2 = dy-2*(ky2/2);
 long M = 1;
 long K = 8+1;
 long K2 = 16+1;
-long n = 8;
+long n = 100;
 
 void train()
 {
@@ -107,7 +109,7 @@ int main(int argc,char ** argv)
     double * dat = new double[M*n*nx*ny];
     for(long i=0,k=0;i<n;i++)
     {
-      long ind_1 = i;
+      long ind_1 = rand()%(full_n+1-M);
         for(long m=0;m<M;m++)
         for(long x=0;x<nx;x++)
         {

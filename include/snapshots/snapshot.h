@@ -5,6 +5,144 @@
 #include <iostream>
 
     template<typename T>
+    void dump_to_file ( ConvolutionalRBM<T> * crbm
+                      , std::string filename
+                      , bool quiet=false
+                      )
+    {
+        if(!quiet)
+          std::cout << "dump to file:" << filename << std::endl;
+        std::ofstream myfile (filename.c_str(),std::ios::out);
+        if (myfile.is_open())
+        {
+          myfile << "#v" << std::endl;
+          myfile << rbm->v << std::endl;
+          myfile << "#h" << std::endl;
+          myfile << rbm->h << std::endl;
+          myfile << "#b" << std::endl;
+          for(long v=0;v<rbm->v;v++)
+          {
+            myfile << rbm->b[v] << " ";
+          }
+          myfile << std::endl;
+          myfile << "#c" << std::endl;
+          for(long h=0;h<rbm->h;h++)
+          {
+            myfile << rbm->c[h] << " ";
+          }
+          myfile << std::endl;
+          myfile << "#W" << std::endl;
+          for(long k=0;k<rbm->h*rbm->v;k++)
+          {
+            myfile << rbm->W[k] << " ";
+          }
+          myfile << std::endl;
+          myfile.close();
+        }
+        else
+        {
+          std::cout << "Unable to open file: " << filename << std::endl;
+          exit(1);
+        }
+
+    }
+
+    template<typename T>
+    void load_from_file ( ConvolutionalRBM<T> * crbm
+                        , std::string filename
+                        , bool quiet=false
+                        )
+    {
+        if(!quiet)
+          std::cout << "loading from file:" << filename << std::endl;
+        std::ifstream myfile (filename.c_str());
+        if (myfile.is_open())
+        {
+
+          std::string line;
+          std::string tmp;
+          int stage = 0;
+          bool done = false;
+          while(!done&&getline(myfile,line))
+          {
+            if(line[0] == '#')continue;
+            switch(stage)
+            {
+              case 0: // get v
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int v = atoi(tmp.c_str());
+                if(v != rbm->v)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 1;
+                break;
+              }
+              case 1: // get h
+              {
+                std::stringstream ss;
+                ss << line;
+                ss >> tmp;
+                int h = atoi(tmp.c_str());
+                if(h != rbm->h)
+                {
+                  std::cout << "network structure is not consistent." << std::endl;
+                  exit(1);
+                }
+                stage = 2;
+                break;
+              }
+              case 2: // get b
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<rbm->v;j++)
+                {
+                    ss >> tmp;
+                    rbm->b[j] = atof(tmp.c_str());
+                }
+                stage = 3;
+                break;
+              }
+              case 3: // get c
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<rbm->h;j++)
+                {
+                    ss >> tmp;
+                    rbm->c[j] = atof(tmp.c_str());
+                }
+                stage = 4;
+                break;
+              }
+              case 4: // get W
+              {
+                std::stringstream ss;
+                ss << line;
+                for(int j=0;j<rbm->h*rbm->v;j++)
+                {
+                    ss >> tmp;
+                    rbm->W[j] = atof(tmp.c_str());
+                }
+                stage = 5;
+                break;
+              }
+              default:done = true;break;
+            }
+          }
+
+          myfile.close();
+        }
+        else std::cout << "Unable to open file: " << filename << std::endl;
+
+    }
+
+    template<typename T>
     void dump_to_file ( RBM<T> * rbm
                       , std::string filename
                       , bool quiet=false
