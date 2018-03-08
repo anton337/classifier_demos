@@ -43,7 +43,7 @@ long dy2 = dy-2*(ky2/2);
 long M = 1;
 long K = 8+1;
 long K2 = 16+1;
-long n = 3200;
+long n = 7*800;
 
 void train()
 {
@@ -51,21 +51,21 @@ void train()
   {
   
     {
-      double eps = 1e-4;
+      double eps = 1e-3;
       bool init = true;
       double init_error;
       double prev_error;
       init = true;
-      for(long i=0;i<1000&&CONTINUE;i++)
+      for(long i=0;i<10&&CONTINUE;i++)
       {
         rbm2 -> init(0);
-        rbm2 -> cd(1,eps,0);
+        rbm2 -> cd(20,eps,0);
         if(init)
         {
           init = false;
           init_error = rbm2->final_error;
         }
-        if(i%100==0)
+        if(i%1==0)
         {
           std::cout << n << '\t' << init_error << '\t' << rbm2 -> final_error << std::endl;
         }
@@ -99,6 +99,16 @@ void train()
   }
 }
 
+struct point
+{
+  int x,y,z;
+  point(int _x,int _y,int _z)
+    : x(_x) , y(_y) , z(_z)
+  {
+
+  }
+};
+
 int main(int argc,char ** argv)
 {
   std::cout << "Convolutional RBM Test." << std::endl;
@@ -114,69 +124,79 @@ int main(int argc,char ** argv)
   }
   if(argc>0)
   {
-    long X = reader_dat.n3/2;
-    float * slice = new float[reader_dat.n1*reader_dat.n2];
-    float * afi_slice = new float[reader_dat.n1*reader_dat.n2];
-    reader_dat.read_sepval ( &slice[0]
-                           , reader_dat.o1
-                           , reader_dat.o2
-                           , reader_dat.o3 + X
-                           , reader_dat.n1
-                           , reader_dat.n2
-                           , 1 // reader.n3
-                           );
-    reader_afi.read_sepval ( &afi_slice[0]
-                           , reader_afi.o1
-                           , reader_afi.o2
-                           , reader_afi.o3 + X
-                           , reader_afi.n1
-                           , reader_afi.n2
-                           , 1 // reader.n3
-                           );
-    std::vector<std::pair<int,int> > faults;
-    for(long y=0,k=0;y<reader_afi.n2;y++)
+    long X = reader_dat.n3/8;
+    long NX = reader_dat.n3 - 2*X;
+    double * dat = new double[NX*M*n*nx*ny];
+    for(long iter=0,k=0;iter<NX;iter++)
     {
-        for(long z=0;z<reader_afi.n1;z++,k++)
-        {
-            if(z>reader_afi.n1/3&&z<2*reader_afi.n1/3)
-            {
-                if(afi_slice[k] > 0.4)
-                {
-                    faults.push_back(std::pair<int,int>(y,z));
-                }
-            }
-        }
-    }
-    double min_val =  10000000;
-    double max_val = -10000000;
-    for(long i=0;i<reader_dat.n1*reader_dat.n2;i++)
-    {
-        min_val = (min_val<slice[i])?min_val:slice[i];
-        max_val = (max_val>slice[i])?max_val:slice[i];
-    }
-    for(long i=0;i<reader_dat.n1*reader_dat.n2;i++)
-    {
-        slice[i] = (slice[i]-min_val)/(max_val-min_val);
-    }
-    double * dat = new double[M*n*nx*ny];
-    for(long i=0,k=0;i<n;i++)
-    {
-        long Z,Y;
-        while(true)
-        {
-            long ind = rand()%faults.size();
-            Z = faults[ind].second - nx/2;
-            Y = faults[ind].first - ny/2;
-            if(Z>=0&&Z+ny<reader_afi.n1&&Y>=0&&Y+nx<reader_afi.n2)break;
-        };
-        for(long m=0;m<M;m++)
-        for(long y=0;y<ny;y++)
-        {
-            for(long x=0;x<nx;x++,k++)
-            {
-                dat[k] = slice[reader_dat.n1*(x+Y) + (y+Z)];
-            }
-        }
+      float * slice = new float[reader_dat.n1*reader_dat.n2];
+      float * afi_slice = new float[reader_dat.n1*reader_dat.n2];
+      reader_dat.read_sepval ( &slice[0]
+                             , reader_dat.o1
+                             , reader_dat.o2
+                             , reader_dat.o3 + X + iter
+                             , reader_dat.n1
+                             , reader_dat.n2
+                             , 1 // reader.n3
+                             );
+      reader_afi.read_sepval ( &afi_slice[0]
+                             , reader_afi.o1
+                             , reader_afi.o2
+                             , reader_afi.o3 + X + iter
+                             , reader_afi.n1
+                             , reader_afi.n2
+                             , 1 // reader.n3
+                             );
+      std::vector<point> faults;
+      for(long x=0,t=0;x<1;x++)
+      {
+          for(long y=0;y<reader_afi.n2;y++)
+          {
+              for(long z=0;z<reader_afi.n1;z++,t++)
+              {
+                  if(z>reader_afi.n1/3&&z<2*reader_afi.n1/3)
+                  {
+                      if(afi_slice[t] > 0.4)
+                      {
+                          faults.push_back(point(x,y,z));
+                      }
+                  }
+              }
+          }
+      }
+      double min_val =  10000000;
+      double max_val = -10000000;
+      for(long i=0;i<1*reader_dat.n1*reader_dat.n2;i++)
+      {
+          min_val = (min_val<slice[i])?min_val:slice[i];
+          max_val = (max_val>slice[i])?max_val:slice[i];
+      }
+      for(long i=0;i<1*reader_dat.n1*reader_dat.n2;i++)
+      {
+          slice[i] = (slice[i]-min_val)/(max_val-min_val);
+      }
+      for(long i=0;i<n;i++)
+      {
+          long X,Y,Z;
+          while(true)
+          {
+              long ind = rand()%faults.size();
+              Z = faults[ind].z - nx/2;
+              Y = faults[ind].y - ny/2;
+              X = faults[ind].x;
+              if(X>=0&&X<1&&Z>=0&&Z+ny<reader_afi.n1&&Y>=0&&Y+nx<reader_afi.n2)break;
+          };
+          for(long m=0;m<M;m++)
+          for(long y=0;y<ny;y++)
+          {
+              for(long x=0;x<nx;x++,k++)
+              {
+                  dat[k] = slice[X*reader_dat.n1*reader_dat.n2 + reader_dat.n1*(x+Y) + (y+Z)];
+              }
+          }
+      }
+      delete [] slice;
+      delete [] afi_slice;
     }
     rbm = new ConvolutionalRBM<double> ( M*nx*ny
                                        , K*dx*dy
