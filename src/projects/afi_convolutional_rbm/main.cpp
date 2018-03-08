@@ -16,11 +16,15 @@ ConvolutionalRBM<double> * rbm = NULL;
 
 ConvolutionalRBM<double> * rbm2 = NULL;
 
+ConvolutionalRBM<double> * rbm3 = NULL;
+
 std::string snapshots =  "";
 
 std::string rbm1_suffix = "/rbm-1.crbm";
 
 std::string rbm2_suffix = "/rbm-2.crbm";
+
+std::string rbm3_suffix = "/rbm-3.crbm";
 
 std::string filename_dat = "/home/antonk/data/oxy.hdr";
 
@@ -30,71 +34,113 @@ SEPReader reader_dat(filename_dat.c_str());
 
 SEPReader reader_afi(filename_afi.c_str());
 
-long nx = 32;
-long ny = 32;
+long nx = 18;
+long ny = 18;
 long kx = 3;
 long ky = 3;
-long kx2 = 5;
-long ky2 = 5;
+long kx2 = 3;
+long ky2 = 3;
+long kx3 = 3;
+long ky3 = 3;
 long dx = nx-2*(kx/2);
 long dy = ny-2*(ky/2);
-long dx2 = dx-2*(kx2/2);
-long dy2 = dy-2*(ky2/2);
+long _dx = dx/2;
+long _dy = dy/2;
+long dx2 = _dx-2*(kx2/2);
+long dy2 = _dy-2*(ky2/2);
+long __dx = dx2/2;
+long __dy = dy2/2;
+long dx3 = __dx-2*(kx3/2);
+long dy3 = __dy-2*(ky3/2);
 long M = 1;
-long K = 8+1;
-long K2 = 16+1;
-long n = 7*800;
+long K = 80+1; // 80 = 16*5
+long K2 = 160+1;
+long K3 = 320+1;
+long n = 10;
+
+long mode = 3;
 
 void train()
 {
   while(CONTINUE)
   {
-  
-    {
-      double eps = 1e-3;
-      bool init = true;
-      double init_error;
-      double prev_error;
-      init = true;
-      for(long i=0;i<10&&CONTINUE;i++)
-      {
-        rbm2 -> init(0);
-        rbm2 -> cd(20,eps,0);
-        if(init)
-        {
-          init = false;
-          init_error = rbm2->final_error;
-        }
-        if(i%1==0)
-        {
-          std::cout << n << '\t' << init_error << '\t' << rbm2 -> final_error << std::endl;
-        }
-      }
-      dump_to_file(rbm2,snapshots+rbm2_suffix);
-    }
 
-    /*
+    switch(mode)
     {
-      double eps = 1e-2;
-      bool init = true;
-      double init_error;
-      init = true;
-      for(long i=0;i<1000;i++)
-      {
-        rbm -> init(0);
-        rbm -> cd(1,eps,0);
-        if(init)
+        case 3:
         {
-          init = false;
-          init_error = rbm->final_error;
+          double eps = 100e-1;
+          bool init = true;
+          double init_error;
+          double prev_error;
+          init = true;
+          for(long i=0;i<10&&CONTINUE;i++)
+          {
+            rbm3 -> init(0);
+            rbm3 -> cd(10,eps,0);
+            if(init)
+            {
+              init = false;
+              init_error = rbm3->final_error;
+            }
+            if(i%1==0)
+            {
+              std::cout << n << '\t' << init_error << '\t' << rbm3 -> final_error << std::endl;
+            }
+          }
+          dump_to_file(rbm3,snapshots+rbm3_suffix);
         }
-        if(i%100==0)
+        break;
+        
+        case 2:
         {
-          std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+          double eps = 1e-2;
+          bool init = true;
+          double init_error;
+          double prev_error;
+          init = true;
+          for(long i=0;i<10&&CONTINUE;i++)
+          {
+            rbm2 -> init(0);
+            rbm2 -> cd(1,eps,0);
+            if(init)
+            {
+              init = false;
+              init_error = rbm2->final_error;
+            }
+            if(i%1==0)
+            {
+              std::cout << n << '\t' << init_error << '\t' << rbm2 -> final_error << std::endl;
+            }
+          }
+          dump_to_file(rbm2,snapshots+rbm2_suffix);
         }
-      }
+        break;
+
+        case 1:
+        {
+          double eps = 1e-3;
+          bool init = true;
+          double init_error;
+          init = true;
+          for(long i=0;i<30&&CONTINUE;i++)
+          {
+            rbm -> init(0);
+            rbm -> cd(1,eps,0);
+            if(init)
+            {
+              init = false;
+              init_error = rbm->final_error;
+            }
+            if(i%1==0)
+            {
+              std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+            }
+          }
+          dump_to_file(rbm,snapshots+rbm1_suffix);
+        }
+        break;
     }
-    */
 
   }
 }
@@ -124,8 +170,10 @@ int main(int argc,char ** argv)
   }
   if(argc>0)
   {
-    long X = reader_dat.n3/8;
-    long NX = reader_dat.n3 - 2*X;
+    //long X = reader_dat.n3/3;
+    //long NX = reader_dat.n3 - 2*X;
+    long X = reader_dat.n3/3;
+    long NX = 10;//reader_dat.n3 - 2*X;
     double * dat = new double[NX*M*n*nx*ny];
     for(long iter=0,k=0;iter<NX;iter++)
     {
@@ -208,7 +256,7 @@ int main(int argc,char ** argv)
                                        , ky
                                        , M
                                        , K
-                                       , n
+                                       , NX*n
                                        , dat
                                        );
 
@@ -216,7 +264,7 @@ int main(int argc,char ** argv)
     bool init = true;
     double init_error;
     init = true;
-    load_from_file(rbm,snapshots+rbm1_suffix);
+    //load_from_file(rbm,snapshots+rbm1_suffix);
     for(long i=0;i<1/*1000*/;i++)
     {
       rbm -> init(0);
@@ -232,22 +280,113 @@ int main(int argc,char ** argv)
       }
     }
     //dump_to_file(rbm,snapshots+rbm1_suffix);
+    
+    double * dat2 = new double[NX*K*n*_dx*_dy];
+    // max pooling 
+    for(long i=0,k=0;i<NX*n;i++)
+    {
+        double max_value;
+        for(long l=0;l<K;l++)
+        {
+            for(long y=0;y<_dy;y++)
+            {
+                for(long x=0;x<_dx;x++,k++)
+                {
+                    max_value = -1000000;
+                    for(long _y=0;_y<2;_y++)
+                    {
+                        for(long _x=0;_x<2;_x++)
+                        {
+                            max_value = (max_value>rbm->hid[i*K*dx*dy+l*dx*dy+(2*y+_y)*dx+(2*x+_x)])
+                                      ?  max_value:rbm->hid[i*K*dx*dy+l*dx*dy+(2*y+_y)*dx+(2*x+_x)];
+                        }
+                    }
+                    dat2[k] = max_value;
+                }
+            }
+        }
+    }
 
-    rbm2 = new ConvolutionalRBM<double> ( K*dx*dy
+    rbm2 = new ConvolutionalRBM<double> ( K*_dx*_dy
                                         , K2*dx2*dy2
-                                        , dx
-                                        , dy
+                                        , _dx
+                                        , _dy
                                         , dx2
                                         , dy2
                                         , kx2
                                         , ky2
                                         , K
                                         , K2
-                                        , n
-                                        , rbm->hid
+                                        , NX*n
+                                        , dat2
                                         , false
                                         );
-    load_from_file(rbm2,snapshots+rbm2_suffix);
+    for(long i=0;i<1/*1000*/;i++)
+    {
+      rbm2 -> init(0);
+      rbm2 -> cd(1,eps,0);
+    }
+    //load_from_file(rbm2,snapshots+rbm2_suffix);
+
+
+
+
+    std::cout << nx << '\t' << ny << std::endl;
+    std::cout << dx << '\t' << dy << std::endl;
+    std::cout << _dx << '\t' << _dy << std::endl;
+    std::cout << dx2 << '\t' << dy2 << std::endl;
+    std::cout << __dx << '\t' << __dy << std::endl;
+    std::cout << dx3 << '\t' << dy3 << std::endl;
+
+
+    double * dat3 = new double[NX*K2*n*__dx*__dy];
+    // max pooling 
+    for(long i=0,k=0;i<NX*n;i++)
+    {
+        double max_value;
+        for(long l=0;l<K2;l++)
+        {
+            for(long y=0;y<__dy;y++)
+            {
+                for(long x=0;x<__dx;x++,k++)
+                {
+                    max_value = -1000000;
+                    for(long _y=0;_y<2;_y++)
+                    {
+                        for(long _x=0;_x<2;_x++)
+                        {
+                            max_value = (max_value>rbm2->hid[i*K2*dx2*dy2+l*dx2*dy2+(2*y+_y)*_dx+(2*x+_x)])
+                                      ?  max_value:rbm2->hid[i*K2*dx2*dy2+l*dx2*dy2+(2*y+_y)*_dx+(2*x+_x)];
+                        }
+                    }
+                    dat3[k] = max_value;
+                }
+            }
+        }
+    }
+
+    rbm3 = new ConvolutionalRBM<double> ( K2*__dx*__dy
+                                        , K3*dx3*dy3
+                                        , __dx
+                                        , __dy
+                                        , dx3
+                                        , dy3
+                                        , kx3
+                                        , ky3
+                                        , K2
+                                        , K3
+                                        , NX*n
+                                        , dat3
+                                        , false
+                                        );
+    for(long i=0;i<1/*1000*/;i++)
+    {
+      rbm3 -> init(0);
+      rbm3 -> cd(1,eps,0);
+    }
+    //load_from_file(rbm3,snapshots+rbm3_suffix);
+
+    /*
     {
         VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
         viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm
@@ -274,6 +413,7 @@ int main(int argc,char ** argv)
         addDisplay ( viz_crbm_hidden );
     }
 
+    
     {
         VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
         viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm2
@@ -299,6 +439,8 @@ int main(int argc,char ** argv)
                                                                   );
         addDisplay ( viz_crbm_hidden );
     }
+    */
+    
   }
   else
   {

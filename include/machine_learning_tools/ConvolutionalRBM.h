@@ -264,10 +264,10 @@ void hid2vis_worker ( worker_dat<T> * g
     for(long iy=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
-      if ( ix      >= 2*wx 
-        && ix+2*wx <  nx
-        && iy      >= 2*wy
-        && iy+2*wy <  ny
+      if ( ix      >= wx 
+        && ix+wx <  nx
+        && iy      >= wy
+        && iy+wy <  ny
          )
       {
         V[k*v+i] = b[i];
@@ -277,8 +277,11 @@ void hid2vis_worker ( worker_dat<T> * g
         {
           long oy=iy-wy+ky;
           long ox=ix-wx+kx;
-          V[k*v+i] += W[m*K*Kx*Ky+z*Kx*Ky+Kx*fy+fx] * H[k*h+dx*oy+ox]; // W is flipped here!
-          //V[k*v+i] += W[z*Kx*Ky+Kx*ty+tx] * H[k*h+dx*oy+ox]; 
+          if(oy>=0&&oy<dy&&ox>=0&&ox<dx)
+          {
+            V[k*v+i] += W[m*K*Kx*Ky+z*Kx*Ky+Kx*fy+fx] * H[k*h+dx*oy+ox]; // W is flipped here!
+            //V[k*v+i] += W[z*Kx*Ky+Kx*ty+tx] * H[k*h+dx*oy+ox]; 
+          }
         }
         //V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
         V[k*v+i] = 10*atan(0.1*V[k*v+i]);
@@ -439,16 +442,17 @@ struct ConvolutionalRBM
       }
       else
       {
-        //long J = 1 + 2*(k-1)/(K-1);
-        long J = 1;
+        long Nrot = 5;
+        long J = 1 + Nrot*(k-1)/(K-1);
+        //long J = 1;
         std::cout << J << std::endl;
-        T * gab = Gabor < T > ( kx                          // nx
-                              , ky                          // ny
-                              , (double)kx/J                // lambda
-                              , 2*M_PI*(double)(k-1)/(K-1)  // theta
-                              , M_PI/2                      // phi
-                              , (double)kx/2                // sigma
-                              , 1.0                         // gamma
+        T * gab = Gabor < T > ( kx                              // nx
+                              , ky                              // ny
+                              , (double)kx/J                    // lambda
+                              , Nrot*2*M_PI*(double)(k-1)/(K-1) // theta
+                              , M_PI/2                          // phi
+                              , (double)kx/2                    // sigma
+                              , 1.0                             // gamma
                               );
         for(long x=0,j=0;x<kx;x++)
         for(long y=0;y<ky;y++,i++,j++)
