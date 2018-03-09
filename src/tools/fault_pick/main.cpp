@@ -361,9 +361,9 @@ void load()
         for(long _x=0,k=0;_x<probex;_x++)
         for(long _y=0;_y<probey;_y++,k++)
         {
-          dat_dtw[_x+_y*probex]                 = 0.5 + 0.1*((_x!=probe&&_y!=probe_samp)?dat_dtw_tmp[k]:1-dat_dtw_tmp[k]);
-          dat_dtw[_x+_y*probex+probex*probey]   = 0.5 + 0.1*(dat_dtw_tmp[k]);
-          dat_dtw[_x+_y*probex+2*probex*probey] = 0.5 + 0.1*(dat_dtw_tmp[k]);
+          dat_dtw[_x+_y*probex]                 = 0.5 + 0.02*((_x!=probe&&_y!=probe_samp)?dat_dtw_tmp[k]:1-dat_dtw_tmp[k]);
+          dat_dtw[_x+_y*probex+probex*probey]   = 0.5 + 0.02*(dat_dtw_tmp[k]);
+          dat_dtw[_x+_y*probex+2*probex*probey] = 0.5 + 0.02*(dat_dtw_tmp[k]);
           //dat_dtw_energy[k] *= 10;
           dat_dtw_energy[k+probex*probey] = dat_dtw_energy[k];
           dat_dtw_energy[k+2*probex*probey] = dat_dtw_energy[k];

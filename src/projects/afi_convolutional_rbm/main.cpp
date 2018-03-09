@@ -70,7 +70,7 @@ void train()
     {
         case 3:
         {
-          double eps = 10e-1;
+          double eps = 100e-1;
           bool init = true;
           double init_error;
           double prev_error;

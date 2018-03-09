@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <boost/thread.hpp>
 
+#include "BoltzmannMachine.h"
+
 #include "common.h"
 
 template<typename T>
@@ -297,7 +299,7 @@ void hid2vis_worker ( worker_dat<T> * g
 }
 
 template<typename T>
-struct ConvolutionalRBM
+struct ConvolutionalRBM : public BoltzmannMachine<T>
 {
 
   T final_error;
@@ -345,6 +347,7 @@ struct ConvolutionalRBM
                    , long _n
                    , T * _X
                    )
+  : BoltzmannMachine ( CONVOLUTIONAL_RESTRICTED_BOLTZMANN_MACHINE_TYPE )
   {
     //for(long k=0;k<100;k++)
     //  std::cout << _X[k] << "\t";

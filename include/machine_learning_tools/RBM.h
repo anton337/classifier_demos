@@ -1,6 +1,8 @@
 #ifndef RBM_H
 #define RBM_H
 
+#include "BoltzmannMachine.h"
+
 #include "common.h"
 
 template<typename T>
@@ -117,7 +119,7 @@ void hid2vis_worker(const T * H,T * V,long h,long v,T * b,T * W,std::vector<long
 }
 
 template<typename T>
-struct RBM
+struct RBM : public BoltzmannMachine<T>
 {
 
   std::vector<T> errs;
@@ -139,7 +141,8 @@ struct RBM
   T * dc;
   T * db;
 
-  RBM(long _v,long _h,T * _W,T * _b,T * _c,long _n,T * _X)
+  RBM(long _v,long _h,T * _W,T * _b,T * _c,long _n,T * _X) 
+  : BoltzmannMachine ( RESTRICTED_BOLTZMANN_MACHINE_TYPE )
   {
     //for(long k=0;k<100;k++)
     //  std::cout << _X[k] << "\t";
