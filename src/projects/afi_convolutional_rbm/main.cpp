@@ -34,14 +34,14 @@ SEPReader reader_dat(filename_dat.c_str());
 
 SEPReader reader_afi(filename_afi.c_str());
 
-long nx = 18;
-long ny = 18;
-long kx = 3;
-long ky = 3;
-long kx2 = 3;
-long ky2 = 3;
-long kx3 = 3;
-long ky3 = 3;
+long nx = 32;
+long ny = 32;
+long kx = 5;
+long ky = 5;
+long kx2 = 5;
+long ky2 = 5;
+long kx3 = 5;
+long ky3 = 5;
 long dx = nx-2*(kx/2);
 long dy = ny-2*(ky/2);
 long _dx = dx/2;
@@ -53,15 +53,16 @@ long __dy = dy2/2;
 long dx3 = __dx-2*(kx3/2);
 long dy3 = __dy-2*(ky3/2);
 long M = 1;
-long K = 80+1; // 80 = 16*5
-long K2 = 160+1;
-long K3 = 320+1;
+long K  = 5*2*8 +1; // 80 = 16*5
+long K2 = 5*2*16+1;
+long K3 = 5*2*32+1;
 long n = 10;
 
 long mode = 3;
 
 void train()
 {
+  
   while(CONTINUE)
   {
 
@@ -69,7 +70,7 @@ void train()
     {
         case 3:
         {
-          double eps = 100e-1;
+          double eps = 10e-1;
           bool init = true;
           double init_error;
           double prev_error;
@@ -77,7 +78,7 @@ void train()
           for(long i=0;i<10&&CONTINUE;i++)
           {
             rbm3 -> init(0);
-            rbm3 -> cd(10,eps,0);
+            rbm3 -> cd(1,eps,0);
             if(init)
             {
               init = false;
@@ -85,7 +86,8 @@ void train()
             }
             if(i%1==0)
             {
-              std::cout << n << '\t' << init_error << '\t' << rbm3 -> final_error << std::endl;
+              std::cout << rbm3->n << '\t' << init_error << '\t' << rbm3 -> final_error << std::endl;
+              if(rbm3->final_error > init_error){mode=1+(mode)%3;break;};
             }
           }
           dump_to_file(rbm3,snapshots+rbm3_suffix);
@@ -110,7 +112,8 @@ void train()
             }
             if(i%1==0)
             {
-              std::cout << n << '\t' << init_error << '\t' << rbm2 -> final_error << std::endl;
+              std::cout << rbm2->n << '\t' << init_error << '\t' << rbm2 -> final_error << std::endl;
+              if(rbm2->final_error > init_error){mode=1+(mode)%3;break;};
             }
           }
           dump_to_file(rbm2,snapshots+rbm2_suffix);
@@ -134,7 +137,8 @@ void train()
             }
             if(i%1==0)
             {
-              std::cout << n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+              std::cout << rbm->n << '\t' << init_error << '\t' << rbm -> final_error << std::endl;
+              if(rbm->final_error > init_error){mode=1+(mode)%3;break;};
             }
           }
           dump_to_file(rbm,snapshots+rbm1_suffix);
@@ -143,6 +147,7 @@ void train()
     }
 
   }
+
 }
 
 struct point
@@ -264,7 +269,7 @@ int main(int argc,char ** argv)
     bool init = true;
     double init_error;
     init = true;
-    //load_from_file(rbm,snapshots+rbm1_suffix);
+    load_from_file(rbm,snapshots+rbm1_suffix);
     for(long i=0;i<1/*1000*/;i++)
     {
       rbm -> init(0);
@@ -326,7 +331,7 @@ int main(int argc,char ** argv)
       rbm2 -> init(0);
       rbm2 -> cd(1,eps,0);
     }
-    //load_from_file(rbm2,snapshots+rbm2_suffix);
+    load_from_file(rbm2,snapshots+rbm2_suffix);
 
 
 
@@ -355,8 +360,8 @@ int main(int argc,char ** argv)
                     {
                         for(long _x=0;_x<2;_x++)
                         {
-                            max_value = (max_value>rbm2->hid[i*K2*dx2*dy2+l*dx2*dy2+(2*y+_y)*_dx+(2*x+_x)])
-                                      ?  max_value:rbm2->hid[i*K2*dx2*dy2+l*dx2*dy2+(2*y+_y)*_dx+(2*x+_x)];
+                            max_value = (max_value>rbm2->hid[i*K2*dx2*dy2+l*dx2*dy2+(2*y+_y)*dx2+(2*x+_x)])
+                                      ?  max_value:rbm2->hid[i*K2*dx2*dy2+l*dx2*dy2+(2*y+_y)*dx2+(2*x+_x)];
                         }
                     }
                     dat3[k] = max_value;
@@ -384,14 +389,14 @@ int main(int argc,char ** argv)
       rbm3 -> init(0);
       rbm3 -> cd(1,eps,0);
     }
-    //load_from_file(rbm3,snapshots+rbm3_suffix);
+    load_from_file(rbm3,snapshots+rbm3_suffix);
 
-    /*
+    
     {
         VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
         viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm
                                                                     , new CRBMConvolutionProbe < double > ( rbm )
-                                                                    , -1 , -.75
+                                                                    , -1 , -.9
                                                                     , -1 , 1
                                                                     );
         addDisplay ( viz_crbm_visible );
@@ -399,7 +404,7 @@ int main(int argc,char ** argv)
         VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
         viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm
                                                                   , new CRBMConvolutionProbe < double > ( rbm )
-                                                                  , -.75 , -.25
+                                                                  , -.9 , -.7
                                                                   ,  -1 , 1
                                                                   );
         addDisplay ( viz_crbm_kernel );
@@ -407,7 +412,7 @@ int main(int argc,char ** argv)
         VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
         viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm
                                                                   , new CRBMConvolutionProbe < double > ( rbm )
-                                                                  ,  -.25 , 0
+                                                                  ,  -.7 , -.6
                                                                   ,  -1 , 1
                                                                   );
         addDisplay ( viz_crbm_hidden );
@@ -418,7 +423,7 @@ int main(int argc,char ** argv)
         VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
         viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm2
                                                                     , new CRBMConvolutionProbe < double > ( rbm2 )
-                                                                    , 0 , .25
+                                                                    , -.6 , -.5
                                                                     , -1 , 1
                                                                     );
         addDisplay ( viz_crbm_visible );
@@ -426,7 +431,7 @@ int main(int argc,char ** argv)
         VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
         viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm2
                                                                   , new CRBMConvolutionProbe < double > ( rbm2 )
-                                                                  , .25 , .75
+                                                                  , -.5 , -.3
                                                                   ,  -1 , 1
                                                                   );
         addDisplay ( viz_crbm_kernel );
@@ -434,12 +439,39 @@ int main(int argc,char ** argv)
         VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
         viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm2
                                                                   , new CRBMConvolutionProbe < double > ( rbm2 )
-                                                                  ,  .75 , 1
+                                                                  ,  -.3 , -.2
                                                                   ,  -1 , 1
                                                                   );
         addDisplay ( viz_crbm_hidden );
     }
-    */
+    
+
+    {
+        VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
+        viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm3
+                                                                    , new CRBMConvolutionProbe < double > ( rbm3 )
+                                                                    , -.2 , -.1
+                                                                    , -1 , 1
+                                                                    );
+        addDisplay ( viz_crbm_visible );
+
+        VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
+        viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm3
+                                                                  , new CRBMConvolutionProbe < double > ( rbm3 )
+                                                                  , -.1 , .1
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_kernel );
+
+        VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
+        viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm3
+                                                                  , new CRBMConvolutionProbe < double > ( rbm3 )
+                                                                  ,  .1 , .2
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_hidden );
+    }
+    
     
   }
   else

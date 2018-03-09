@@ -49,7 +49,7 @@ struct CRBMConvolutionProbe
         M = crbm->M; // MARK!!!
         input_dat = new T[M*nx*ny];
         output_dat = new T[N*dx*dy];
-        kernel_dat = new T[N*dx*dy];
+        kernel_dat = new T[N*M*kx*ky];
         in_input_grid_nx = nx;
         in_input_grid_ny = ny;
         in_output_grid_nx = 1;
@@ -122,11 +122,11 @@ struct CRBMConvolutionProbe
         long ky = crbm->ky;
         long M = crbm->M;
         long K = crbm->K;
-        for(long m=0,k=0;m<crbm->M;m++)
-        for(long n=0;n<crbm->K;n++)
+        for(long m=0,k=0;m<M;m++)
+        for(long n=0;n<K;n++)
           {
-            for(long x=0;x<crbm->kx;x++)
-              for(long y=0;y<crbm->ky;y++,k++)
+            for(long x=0;x<kx;x++)
+              for(long y=0;y<ky;y++,k++)
               {
                 kernel_dat[k] = crbm->W[k];
               }
