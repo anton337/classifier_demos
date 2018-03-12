@@ -11,14 +11,14 @@ enum BOLTZMANN_MACHINE_TYPE
 template<typename T>
 struct BoltzmannMachine
 {
-    static const BOLTZMANN_MACHINE_TYPE type; 
+    const BOLTZMANN_MACHINE_TYPE type; 
     BoltzmannMachine ()
         : type ( UNDEFINED_TYPE )
     {
 
     }
 
-    BoltzmannMachine ( p_type )
+    BoltzmannMachine ( BOLTZMANN_MACHINE_TYPE p_type )
         : type ( p_type )
     {
 

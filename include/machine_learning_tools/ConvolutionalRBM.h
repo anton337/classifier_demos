@@ -347,7 +347,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
                    , long _n
                    , T * _X
                    )
-  : BoltzmannMachine ( CONVOLUTIONAL_RESTRICTED_BOLTZMANN_MACHINE_TYPE )
+  : BoltzmannMachine <T> ( CONVOLUTIONAL_RESTRICTED_BOLTZMANN_MACHINE_TYPE )
   {
     //for(long k=0;k<100;k++)
     //  std::cout << _X[k] << "\t";

@@ -10,7 +10,8 @@
 #export PROJECT=cifar_classifier
 #export PROJECT=salt_classifier
 #export PROJECT=convolutional_rbm
-export PROJECT=afi_convolutional_rbm
+#export PROJECT=afi_convolutional_rbm
+export PROJECT=convolutional_rbm_auto_encoder
 
 ./clean.sh
 

@@ -21,13 +21,13 @@ T dsigmoid1(T x)
 template < typename T >
 T sigmoid3(T x)
 {
-    return atan(x);
+    return 10*atan(0.1*x);
 }
 
 template < typename T >
 T dsigmoid3(T x)
 {
-    return 1.00/(1+x*x);
+    return 10.0*0.1/(1+0.1*0.1*x*x);
 }
 
 template < typename T >
