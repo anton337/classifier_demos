@@ -2226,8 +2226,13 @@ struct ConvolutionalNeuralNetwork
             switch(n_layer_type[layer])
             {
                 case IDENTITY_LAYER :
+                    {
+                        std::cout << "identity" << std::endl;
+                        break;
+                    }
                 case RELU_LAYER :
                     {
+                        std::cout << "relu" << std::endl;
                         if(n_nodes[layer+1] != n_nodes[layer])
                         {
                             std::cout << "layer " << layer+1 << " relu layer should have same number of neurons as output " << std::endl;
@@ -2260,6 +2265,7 @@ struct ConvolutionalNeuralNetwork
                     }
                 case FULLY_CONNECTED_LAYER :
                     {
+                        std::cout << "full" << std::endl;
                         activation_values [layer] = new T[n_nodes[layer]];
                         activation_values1[layer] = new T[n_nodes[layer]];
                         activation_values2[layer] = new T[n_nodes[layer]];
@@ -2274,6 +2280,8 @@ struct ConvolutionalNeuralNetwork
                         long wy = (ky[layer]/2);
                         long dx = nx[layer] - wx*2;
                         long dy = ny[layer] - wy*2;
+                        std::cout << "convolutional" << std::endl;
+                        std::cout << "dx:" << dx << '\t' << "dy:" << dy << '\t' << "N:" << N << std::endl;
                         if(n_nodes[layer+1] != N*dx*dy)
                         {
                             std::cout << "layer " << layer+1 << " n_nodes convolutional is: " << n_nodes[layer+1] << " should be: " << N*dx*dy << std::endl;
@@ -2297,25 +2305,27 @@ struct ConvolutionalNeuralNetwork
                     }
                 case DECONVOLUTIONAL_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
-                        if(n_nodes[layer+1] != N*dx*dy)
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        long wx = (kx[layer-1]/2);
+                        long wy = (ky[layer-1]/2);
+                        long dx = nx[layer-1] + wx*2;
+                        long dy = ny[layer-1] + wy*2;
+                        std::cout << "deconvolutional" << std::endl;
+                        std::cout << "dx:" << dx << '\t' << "dy:" << dx << '\t' << "N:" << N << std::endl;
+                        if(n_nodes[layer] != N*dx*dy)
                         {
-                            std::cout << "layer " << layer+1 << " n_nodes convolutional is: " << n_nodes[layer+1] << " should be: " << N*dx*dy << std::endl;
+                            std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
                             exit(1);
                         }
-                        if(nx[layer+1] != dx)
+                        if(nx[layer] != dx)
                         {
-                            std::cout << "nx[" << layer+1 << "] should be: " << dx << std::endl;
+                            std::cout << "nx[" << layer << "] should be: " << dx << std::endl;
                             exit(1);
                         }
-                        if(ny[layer+1] != dy)
+                        if(ny[layer] != dy)
                         {
-                            std::cout << "ny[" << layer+1 << "] should be: " << dy << std::endl;
+                            std::cout << "ny[" << layer << "] should be: " << dy << std::endl;
                             exit(1);
                         }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];
@@ -2327,6 +2337,7 @@ struct ConvolutionalNeuralNetwork
                 case MAX_POOLING_LAYER :
                 case MEAN_POOLING_LAYER :
                     {
+                        std::cout << "pooling" << std::endl;
                         long M = n_features[layer];
                         long N = n_features[layer+1];
                         if(M != N)
@@ -2365,33 +2376,35 @@ struct ConvolutionalNeuralNetwork
                 case MAX_UNPOOLING_LAYER :
                 case MEAN_UNPOOLING_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
+                        std::cout << "unpooling" << std::endl;
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
                         if(M != N)
                         {
-                            std::cout << "pooling layer has to have the same number of input/output features" << std::endl;
+                            std::cout << "unpooling layer has to have the same number of input/output features" << std::endl;
                             exit(1);
                         }
-                        long dx = nx[layer] / pooling_factorx[layer+1];
-                        if(nx[layer] != pooling_factorx[layer+1]*nx[layer+1])
+                        long dx = nx[layer-1] * pooling_factorx[layer];
+                        std::cout << nx[layer-1] << '\t' << nx[layer] << std::endl;
+                        if(nx[layer-1] != nx[layer] / pooling_factorx[layer])
                         {
-                            std::cout << "pooling layer nx: " << layer+1 << " should be: " << dx << std::endl;
+                            std::cout << "unpooling layer nx: " << layer << " should be: " << dx << std::endl;
                             exit(1);
                         }
-                        long dy = ny[layer] / pooling_factory[layer+1];
-                        if(ny[layer] != pooling_factory[layer+1]*ny[layer+1])
+                        long dy = ny[layer-1] * pooling_factory[layer];
+                        if(ny[layer-1] != ny[layer] / pooling_factory[layer])
                         {
-                            std::cout << "pooling layer ny: " << layer+1 << " should be: " << dy << std::endl;
+                            std::cout << "unpooling layer ny: " << layer << " should be: " << dy << std::endl;
                             exit(1);
                         }
-                        if(n_nodes[layer] % (pooling_factorx[layer+1]*pooling_factory[layer+1]) != 0)
+                        if(n_nodes[layer] % (pooling_factorx[layer]*pooling_factory[layer]) != 0)
                         {
-                            std::cout << "pooling layer n_nodes: " << layer << " should be divisible by: " << (pooling_factorx[layer+1]*pooling_factory[layer+1]) << std::endl;
+                            std::cout << "unpooling layer n_nodes: " << layer << " should be divisible by: " << (pooling_factorx[layer]*pooling_factory[layer]) << std::endl;
                             exit(1);
                         }
-                        if(n_nodes[layer] != pooling_factorx[layer+1]*pooling_factory[layer+1]*n_nodes[layer+1])
+                        if(n_nodes[layer-1] != n_nodes[layer] / (pooling_factorx[layer]*pooling_factory[layer+1]) )
                         {
-                            std::cout << "pooling layer n_nodes: " << layer+1 << " should be: " << n_nodes[layer]/(pooling_factorx[layer+1]*pooling_factory[layer+1]) << std::endl;
+                            std::cout << "unpooling layer n_nodes: " << layer-1 << " should be: " << n_nodes[layer]/(pooling_factorx[layer]*pooling_factory[layer]) << std::endl;
                             exit(1);
                         }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];

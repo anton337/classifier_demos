@@ -4,6 +4,16 @@
 int main()
 {
   std::cout << "Auto Encoder Constructor" << std::endl;
+  std::map<int,std::string> str;
+  str[1] = "full";
+  str[2] = "ident";
+  str[3] = "relu";
+  str[4] = "pool";
+  str[5] = "pool";
+  str[6] = "conv";
+  str[7] = "deconv";
+  str[8] = "unpool";
+  str[9] = "unpool";
   AutoEncoderConstructor < double > constructor;
   int nx=32;
   int ny=32;
@@ -39,8 +49,6 @@ int main()
   features.push_back( 80+1);
   features.push_back(160+1);
   features.push_back(160+1);
-  features.push_back(320+1);
-  features.push_back(320+1);
   features.push_back(320+1);
   features.push_back(160+1);
   features.push_back(160+1);
@@ -119,8 +127,6 @@ int main()
   tmp -= 2*(layer_kx[2]/2);         layer_nx.push_back(tmp);
   tmp /= layer_pooling_factorx[3];  layer_nx.push_back(tmp);
   tmp -= 2*(layer_kx[2]/2);         layer_nx.push_back(tmp);
-                                    layer_nx.push_back(tmp);
-                                    layer_nx.push_back(tmp);
   tmp += 2*(layer_kx[0]/2);         layer_nx.push_back(tmp);
   tmp *= layer_pooling_factorx[1];  layer_nx.push_back(tmp);
   tmp += 2*(layer_kx[2]/2);         layer_nx.push_back(tmp);
@@ -133,8 +139,6 @@ int main()
   tmp -= 2*(layer_ky[2]/2);         layer_ny.push_back(tmp);
   tmp /= layer_pooling_factory[3];  layer_ny.push_back(tmp);
   tmp -= 2*(layer_ky[2]/2);         layer_ny.push_back(tmp);
-                                    layer_ny.push_back(tmp);
-                                    layer_ny.push_back(tmp);
   tmp += 2*(layer_ky[0]/2);         layer_ny.push_back(tmp);
   tmp *= layer_pooling_factory[1];  layer_ny.push_back(tmp);
   tmp += 2*(layer_ky[2]/2);         layer_ny.push_back(tmp);
@@ -152,12 +156,23 @@ int main()
   nodes.push_back ( features[8 ]*layer_nx[8 ]*layer_ny[8 ] );
   nodes.push_back ( features[9 ]*layer_nx[9 ]*layer_ny[9 ] );
   nodes.push_back ( features[10]*layer_nx[10]*layer_ny[10] );
-  nodes.push_back ( features[11]*layer_nx[11]*layer_ny[11] );
-  nodes.push_back ( features[12]*layer_nx[12]*layer_ny[12] );
   for(long i=0;i<layer_nx.size();i++)
   {
-    std::cout << i << "\tsize=" << layer_nx[i] << '\t' << layer_ny[i] << '\t' << features[i] << '\t' << nodes[i] << std::endl;
+    std::cout << i << "\t" << str[layer_type[i]] << "\tsize=" << layer_nx[i] << '\t' << layer_ny[i] << '\t' << features[i] << '\t' << nodes[i] << std::endl;
   }
+  /*
+  0     CONVOLUTIONAL_LAYER  size=32 32  1   1024
+  1       MAX_POOLING_LAYER  size=28 28  81  63504
+  2     CONVOLUTIONAL_LAYER  size=14 14  81  15876
+  3       MAX_POOLING_LAYER  size=10 10  161 16100
+  4     CONVOLUTIONAL_LAYER  size=5  5   161 4025
+  5          IDENTITY_LAYER  size=1  1   321 321
+  6   DECONVOLUTIONAL_LAYER  size=5  5   161 4025
+  7     MAX_UNPOOLING_LAYER  size=10 10  161 16100
+  8   DECONVOLUTIONAL_LAYER  size=14 14  81  15876
+  9     MAX_UNPOOLING_LAYER  size=28 28  81  63504
+  10  DECONVOLUTIONAL_LAYER  size=32 32  1   1024
+  */
   std::vector<bool> locked;
   locked.push_back(false);
   locked.push_back(false);
