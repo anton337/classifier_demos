@@ -100,6 +100,10 @@ struct cnn_training_info
             switch(n_layer_type[layer])
             {
                 case IDENTITY_LAYER :
+                    {
+                        activation_values [layer] = new T[n_nodes[layer]];
+                        break;
+                    }
                 case RELU_LAYER :
                     {
                         activation_values [layer] = new T[n_nodes[layer]];
@@ -123,12 +127,27 @@ struct cnn_training_info
                     }
                 case DECONVOLUTIONAL_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        long wx = (kx[layer-1]/2);
+                        long wy = (ky[layer-1]/2);
+                        long dx = nx[layer-1] + wx*2;
+                        long dy = ny[layer-1] + wy*2;
+                        if(n_nodes[layer] != N*dx*dy)
+                        {
+                            std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
+                            exit(1);
+                        }
+                        if(nx[layer] != dx)
+                        {
+                            std::cout << "nx[" << layer << "] should be: " << dx << std::endl;
+                            exit(1);
+                        }
+                        if(ny[layer] != dy)
+                        {
+                            std::cout << "ny[" << layer << "] should be: " << dy << std::endl;
+                            exit(1);
+                        }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];
                         break;
                     }
@@ -154,29 +173,50 @@ struct cnn_training_info
                             std::cout << "pooling layer ny: " << layer+1 << " should be: " << dy << std::endl;
                             exit(1);
                         }
+                        if(n_nodes[layer] % (pooling_factorx[layer+1]*pooling_factory[layer+1]) != 0)
+                        {
+                            std::cout << "pooling layer n_nodes: " << layer << " should be divisible by: " << (pooling_factorx[layer+1]*pooling_factory[layer+1]) << std::endl;
+                            exit(1);
+                        }
+                        if(n_nodes[layer] != pooling_factorx[layer+1]*pooling_factory[layer+1]*n_nodes[layer+1])
+                        {
+                            std::cout << "pooling layer n_nodes: " << layer+1 << " should be: " << n_nodes[layer]/(pooling_factorx[layer+1]*pooling_factory[layer+1]) << std::endl;
+                            exit(1);
+                        }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];
                         break;
                     }
                 case MAX_UNPOOLING_LAYER :
                 case MEAN_UNPOOLING_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
                         if(M != N)
                         {
-                            std::cout << "pooling layer has to have the same number of input/output features" << std::endl;
+                            std::cout << "unpooling layer has to have the same number of input/output features" << std::endl;
                             exit(1);
                         }
-                        long dx = nx[layer] / pooling_factorx[layer+1];
-                        if(nx[layer] != pooling_factorx[layer+1]*nx[layer+1])
+                        long dx = nx[layer-1] * pooling_factorx[layer];
+                        std::cout << nx[layer-1] << '\t' << nx[layer] << std::endl;
+                        if(nx[layer-1] != nx[layer] / pooling_factorx[layer])
                         {
-                            std::cout << "pooling layer nx: " << layer+1 << " should be: " << dx << std::endl;
+                            std::cout << "unpooling layer nx: " << layer << " should be: " << dx << std::endl;
                             exit(1);
                         }
-                        long dy = ny[layer] / pooling_factory[layer+1];
-                        if(ny[layer] != pooling_factory[layer+1]*ny[layer+1])
+                        long dy = ny[layer-1] * pooling_factory[layer];
+                        if(ny[layer-1] != ny[layer] / pooling_factory[layer])
                         {
-                            std::cout << "pooling layer ny: " << layer+1 << " should be: " << dy << std::endl;
+                            std::cout << "unpooling layer ny: " << layer << " should be: " << dy << std::endl;
+                            exit(1);
+                        }
+                        if(n_nodes[layer] % (pooling_factorx[layer]*pooling_factory[layer]) != 0)
+                        {
+                            std::cout << "unpooling layer n_nodes: " << layer << " should be divisible by: " << (pooling_factorx[layer]*pooling_factory[layer]) << std::endl;
+                            exit(1);
+                        }
+                        if(n_nodes[layer-1] != n_nodes[layer] / (pooling_factorx[layer]*pooling_factory[layer+1]) )
+                        {
+                            std::cout << "unpooling layer n_nodes: " << layer-1 << " should be: " << n_nodes[layer]/(pooling_factorx[layer]*pooling_factory[layer]) << std::endl;
                             exit(1);
                         }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];
@@ -196,6 +236,10 @@ struct cnn_training_info
             switch(n_layer_type[layer])
             {
                 case IDENTITY_LAYER :
+                    {
+                        deltas[layer] = new T[n_nodes[layer]];
+                        break;
+                    }
                 case RELU_LAYER :
                     {
                         deltas[layer] = new T[n_nodes[layer]];
@@ -219,12 +263,27 @@ struct cnn_training_info
                     }
                 case DECONVOLUTIONAL_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        long wx = (kx[layer-1]/2);
+                        long wy = (ky[layer-1]/2);
+                        long dx = nx[layer-1] + wx*2;
+                        long dy = ny[layer-1] + wy*2;
+                        if(n_nodes[layer] != N*dx*dy)
+                        {
+                            std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
+                            exit(1);
+                        }
+                        if(nx[layer] != dx)
+                        {
+                            std::cout << "nx[" << layer << "] should be: " << dx << std::endl;
+                            exit(1);
+                        }
+                        if(ny[layer] != dy)
+                        {
+                            std::cout << "ny[" << layer << "] should be: " << dy << std::endl;
+                            exit(1);
+                        }
                         deltas[layer] = new T[M*nx[layer]*ny[layer]];
                         break;
                     }
@@ -342,12 +401,29 @@ struct cnn_training_info
                     }
                 case DECONVOLUTIONAL_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        long wx = (kx[layer-1]/2);
+                        long wy = (ky[layer-1]/2);
+                        long dx = nx[layer-1] + wx*2;
+                        long dy = ny[layer-1] + wy*2;
+                        std::cout << "deconvolutional" << std::endl;
+                        std::cout << "dx:" << dx << '\t' << "dy:" << dx << '\t' << "N:" << N << std::endl;
+                        if(n_nodes[layer] != N*dx*dy)
+                        {
+                            std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
+                            exit(1);
+                        }
+                        if(nx[layer] != dx)
+                        {
+                            std::cout << "nx[" << layer << "] should be: " << dx << std::endl;
+                            exit(1);
+                        }
+                        if(ny[layer] != dy)
+                        {
+                            std::cout << "ny[" << layer << "] should be: " << dy << std::endl;
+                            exit(1);
+                        }
                         std::cout << "conv dim:" << ky[layer]*N << "x" << kx[layer]*M << std::endl;
                         partial_weights_neuron[layer] = new T*[ky[layer]*N];
                         tmp_partial_weights_neuron[layer] = new T*[ky[layer]*N];
@@ -471,12 +547,29 @@ struct cnn_training_info
                         //    std::cout << "n_nodes " << layer << " is " << n_nodes[layer] << " should be " << kx[layer]*M << std::endl;
                         //    exit(1);
                         //}
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        long wx = (kx[layer-1]/2);
+                        long wy = (ky[layer-1]/2);
+                        long dx = nx[layer-1] + wx*2;
+                        long dy = ny[layer-1] + wy*2;
+                        std::cout << "deconvolutional" << std::endl;
+                        std::cout << "dx:" << dx << '\t' << "dy:" << dx << '\t' << "N:" << N << std::endl;
+                        if(n_nodes[layer] != N*dx*dy)
+                        {
+                            std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
+                            exit(1);
+                        }
+                        if(nx[layer] != dx)
+                        {
+                            std::cout << "nx[" << layer << "] should be: " << dx << std::endl;
+                            exit(1);
+                        }
+                        if(ny[layer] != dy)
+                        {
+                            std::cout << "ny[" << layer << "] should be: " << dy << std::endl;
+                            exit(1);
+                        }
                         for(long i=0;i<ky[layer]*N;i++)
                         {
                             for(long j=0;j<kx[layer]*M;j++)
@@ -562,12 +655,29 @@ struct cnn_training_info
                     }
                 case DECONVOLUTIONAL_LAYER :
                     {
-                        long M = n_features[layer];
-                        long N = n_features[layer+1];
-                        long wx = (kx[layer]/2);
-                        long wy = (ky[layer]/2);
-                        long dx = nx[layer] - wx*2;
-                        long dy = ny[layer] - wy*2;
+                        long M = n_features[layer-1];
+                        long N = n_features[layer];
+                        long wx = (kx[layer-1]/2);
+                        long wy = (ky[layer-1]/2);
+                        long dx = nx[layer-1] + wx*2;
+                        long dy = ny[layer-1] + wy*2;
+                        std::cout << "deconvolutional" << std::endl;
+                        std::cout << "dx:" << dx << '\t' << "dy:" << dx << '\t' << "N:" << N << std::endl;
+                        if(n_nodes[layer] != N*dx*dy)
+                        {
+                            std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
+                            exit(1);
+                        }
+                        if(nx[layer] != dx)
+                        {
+                            std::cout << "nx[" << layer << "] should be: " << dx << std::endl;
+                            exit(1);
+                        }
+                        if(ny[layer] != dy)
+                        {
+                            std::cout << "ny[" << layer << "] should be: " << dy << std::endl;
+                            exit(1);
+                        }
                         for(long i=0;i<ky[layer]*N;i++)
                         {
                             delete [] partial_weights_neuron[layer][i];
@@ -742,30 +852,30 @@ struct cnn_training_info
                             //    std::cout << "n_nodes " << layer << " is " << n_nodes[layer] << " should be " << kx[layer]*M << std::endl;
                             //    exit(1);
                             //}
-                            long M = n_features[layer];
-                            long N = n_features[layer+1];
-                            long wx = (kx[layer]/2);
-                            long wy = (ky[layer]/2);
-                            long dx = nx[layer] - wx*2;
-                            long dy = ny[layer] - wy*2;
-                            {
-                                for(long i=0;i<ky[layer]*N;i++)
-                                {
-                                    T sum = 0;
-                                    for(long j=0;j<kx[layer]*M;j++,k++)
-                                    {
-                                        weights_neuron[layer][i][j] += scale_factor*epsilon * partial_weights_neuron[layer][i][j];
-                                        sum += partial_weights_neuron[layer][i][j];
-                                    }
-                                    //std::cout << layer << '\t' << i << '\t' << sum << std::endl;
-                                }
-                            }
-                            {
-                                for(long i=0;i<N*dx*dy;i++,k++)
-                                {
-                                    weights_bias[layer][i] += scale_factor*epsilon * partial_weights_bias[layer][i];
-                                }
-                            }
+                            //long M = n_features[layer];
+                            //long N = n_features[layer+1];
+                            //long wx = (kx[layer]/2);
+                            //long wy = (ky[layer]/2);
+                            //long dx = nx[layer] - wx*2;
+                            //long dy = ny[layer] - wy*2;
+                            //{
+                            //    for(long i=0;i<ky[layer]*N;i++)
+                            //    {
+                            //        T sum = 0;
+                            //        for(long j=0;j<kx[layer]*M;j++,k++)
+                            //        {
+                            //            weights_neuron[layer][i][j] += scale_factor*epsilon * partial_weights_neuron[layer][i][j];
+                            //            sum += partial_weights_neuron[layer][i][j];
+                            //        }
+                            //        //std::cout << layer << '\t' << i << '\t' << sum << std::endl;
+                            //    }
+                            //}
+                            //{
+                            //    for(long i=0;i<N*dx*dy;i++,k++)
+                            //    {
+                            //        weights_bias[layer][i] += scale_factor*epsilon * partial_weights_bias[layer][i];
+                            //    }
+                            //}
                             break;
                         }
                     default :
@@ -801,10 +911,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 {
                     case IDENTITY_LAYER :
                         {
-                            for(long i=0;i<g->n_nodes[layer+1];i++)
-                            {
-                                g->activation_values[layer+1][i] = g->activation_values[layer][i];
-                            }
+                            
                             break;
                         }
                     case RELU_LAYER :
@@ -1052,18 +1159,16 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             //
                             //************************************************************************************//
 
-                            // j : n_nodes[layer  ] = curr size = M * nx * ny
-                            // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer];
-                            long N = g->n_features[layer+1];
-                            long kx = g->kx[layer];
-                            long ky = g->ky[layer];
-                            long nx = g->nx[layer];
-                            long ny = g->ny[layer];
+                            long M = g->n_features[layer-1];
+                            long N = g->n_features[layer];
+                            long kx = g->kx[layer-1];
+                            long ky = g->ky[layer-1];
                             long wx = (kx/2);
                             long wy = (ky/2);
-                            long dx = nx - wx*2;
-                            long dy = ny - wy*2;
+                            long nx = g->nx[layer-1];
+                            long ny = g->ny[layer-1];
+                            long dx = g->nx[layer-1] + wx*2;
+                            long dy = g->ny[layer-1] + wy*2;
                             T factor = 1.0 / (kx*ky);
 
                             {
@@ -1072,24 +1177,36 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long oy=0;oy<dy;oy++)
                                     for(long ox=0;ox<dx;ox++,i++)
                                     {
-                                        T sum = 0;//g->weights_bias[layer][i];
-                                        long ix = ox+wx;
-                                        long iy = oy+wy;
-                                        for(long m=0;m<M;m++)
+                                        if ( ox    >= wx 
+                                          && ox+wx <  dx
+                                          && oy    >= wy
+                                          && oy+wy <  dy
+                                           )
                                         {
-                                            for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
-                                            for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                            T sum = 0;//g->weights_bias[layer][i];
+                                            for(long m=0;m<M;m++)
                                             {
-                                                // W * y
-                                                sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                     * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
-                                                     * factor;
+                                                for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                                                for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                                {
+                                                    long ix = ox-wx+fx;
+                                                    long iy = oy-wy+fy;
+                                                    // W * y
+                                                    if(ix>=0&&ix<nx&&iy>=0&&iy<ny)
+                                                    sum += g->weights_neuron[layer][ky*n+ty][kx*m+tx]
+                                                         * g->activation_values[layer][(nx*ny)*m + nx*iy + ix]
+                                                         * factor;
+                                                }
                                             }
+                                            g->activation_values[layer+1][i] = sigmoid(sum,2); // arctan
+                                            //std::cout << g->activation_values[layer+1][i] << "  ";
+                                            //std::cout << sum << "  ";
+                                            //if(i%dx==0)std::cout << std::endl;
                                         }
-                                        g->activation_values[layer+1][i] = sigmoid(sum,2); // arctan
-                                        //std::cout << g->activation_values[layer+1][i] << "  ";
-                                        //std::cout << sum << "  ";
-                                        //if(i%dx==0)std::cout << std::endl;
+                                        else
+                                        {
+                                            g->activation_values[layer+1][i] = 0;
+                                        }
                                     }
                                 }
                             }
@@ -1117,7 +1234,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*y+x];
+                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*(y+ty)+(x+tx)];
                                         if(tmp_val>max_val)
                                         {
                                           max_val = tmp_val;
@@ -1151,7 +1268,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        mean_val += g->activation_values[layer][m*nx*nx+nx*y+x];
+                                        mean_val += g->activation_values[layer][m*nx*nx+nx*(y+ty)+(x+tx)];
                                     }
                                     g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = mean_val * factor;
                                 }
@@ -1167,8 +1284,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             long ny = g->ny[layer];
                             long factorx = g->pooling_factorx[layer];
                             long factory = g->pooling_factory[layer];
-                            long dx = nx / factorx;
-                            long dy = ny / factory;
+                            long dx = nx * factorx;
+                            long dy = ny * factory;
                             T tmp_val,max_val;
 
                             for(long m=0,i=0;m<M;m++)
@@ -1176,17 +1293,12 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 for(long y=0,oy=0;y<ny;y+=factory,oy++)
                                 for(long x=0,ox=0;x<nx;x+=factorx,ox++)
                                 {
-                                    max_val = -100000000;
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*y+x];
-                                        if(tmp_val>max_val)
-                                        {
-                                          max_val = tmp_val;
-                                        }
+                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*oy+ox];
+                                        g->activation_values[layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] = tmp_val;
                                     }
-                                    g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = max_val;
                                 }
                             }
                             break;
@@ -1200,8 +1312,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             long ny = g->ny[layer];
                             long factorx = g->pooling_factorx[layer];
                             long factory = g->pooling_factory[layer];
-                            long dx = nx / factorx;
-                            long dy = ny / factory;
+                            long dx = nx * factorx;
+                            long dy = ny * factory;
                             T tmp_val,mean_val;
                             T factor = 1.0 / (factorx * factory);
 
@@ -1210,13 +1322,12 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 for(long y=0,oy=0;y<ny;y+=factory,oy++)
                                 for(long x=0,ox=0;x<nx;x+=factorx,ox++)
                                 {
-                                    mean_val = 0;
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        mean_val += g->activation_values[layer][m*nx*nx+nx*y+x];
+                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*oy+ox];
+                                        g->activation_values[layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] = tmp_val;
                                     }
-                                    g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = mean_val * factor;
                                 }
                             }
                             break;
@@ -1297,12 +1408,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                     {
                         case IDENTITY_LAYER :
                             {
-                                for(long i=0;i<g->n_nodes[layer+1];i++)
-                                {
-                                    {
-                                        g->deltas[layer+1][i] = g->deltas[layer+2][i];
-                                    }
-                                }
+
                                 break;
                             }
                         case RELU_LAYER :
@@ -1400,51 +1506,51 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             {
                                 // i : n_nodes[layer+1] = curr size = M * nx * ny
                                 // j : n_nodes[layer+2] = next size = N * dx * dy
-                                long M = g->n_features[layer+1];
-                                long N = g->n_features[layer+2];
-                                long kx = g->kx[layer+1];
-                                long ky = g->ky[layer+1];
-                                long nx = g->nx[layer+1];
-                                long ny = g->ny[layer+1];
-                                long wx = (kx/2);
-                                long wy = (ky/2);
-                                long dx = nx - wx*2;
-                                long dy = ny - wy*2;
-                                T max_deltas = 0;
-                                T max_prev_deltas = 0;
-                                long vx,vy;
-                                for(long m=0,i=0;m<M;m++)
-                                {
-                                    {
-                                        for(long iy=0;iy<ny;iy++)
-                                        for(long ix=0;ix<nx;ix++,i++)
-                                        {
-                                            g->deltas[layer+1][i] = 0;
-                                            for(long n=0;n<N;n++)
-                                            {
-                                                for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
-                                                for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
-                                                {
-                                                    vy = iy+fy;
-                                                    vx = ix+fx;
-                                                    if(vx>=0 && vx<dx && vy>=0 && vy<dy)
-                                                    {
-                                                        g->deltas[layer+1][i] +=
-                                                            // dEdy
-                                                            (
-                                                              g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]
-                                                            )
-                                                            // W
-                                                            //* g->weights_neuron[layer+1][ky*n+(ky-1-ty)][kx*m+(kx-1-tx)] 
-                                                            * g->weights_neuron[layer+1][ky*n+ty][kx*m+tx] 
-                                                            ;
-                                                    }
-                                                }
-                                            }
-                                            g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],2);
-                                        }
-                                    }
-                                }
+                                //long M = g->n_features[layer+1];
+                                //long N = g->n_features[layer+2];
+                                //long kx = g->kx[layer+1];
+                                //long ky = g->ky[layer+1];
+                                //long nx = g->nx[layer+1];
+                                //long ny = g->ny[layer+1];
+                                //long wx = (kx/2);
+                                //long wy = (ky/2);
+                                //long dx = nx - wx*2;
+                                //long dy = ny - wy*2;
+                                //T max_deltas = 0;
+                                //T max_prev_deltas = 0;
+                                //long vx,vy;
+                                //for(long m=0,i=0;m<M;m++)
+                                //{
+                                //    {
+                                //        for(long iy=0;iy<ny;iy++)
+                                //        for(long ix=0;ix<nx;ix++,i++)
+                                //        {
+                                //            g->deltas[layer+1][i] = 0;
+                                //            for(long n=0;n<N;n++)
+                                //            {
+                                //                for(long fy=-wy,ty=0;fy<=wy;fy++,ty++)
+                                //                for(long fx=-wx,tx=0;fx<=wx;fx++,tx++)
+                                //                {
+                                //                    vy = iy+fy;
+                                //                    vx = ix+fx;
+                                //                    if(vx>=0 && vx<dx && vy>=0 && vy<dy)
+                                //                    {
+                                //                        g->deltas[layer+1][i] +=
+                                //                            // dEdy
+                                //                            (
+                                //                              g->deltas[layer+2][(dx*dy)*n + dx*vy + vx]
+                                //                            )
+                                //                            // W
+                                //                            //* g->weights_neuron[layer+1][ky*n+(ky-1-ty)][kx*m+(kx-1-tx)] 
+                                //                            * g->weights_neuron[layer+1][ky*n+ty][kx*m+tx] 
+                                //                            ;
+                                //                    }
+                                //                }
+                                //            }
+                                //            g->deltas[layer+1][i] *= dsigmoid(g->activation_values[layer+1][(nx*ny)*m + nx*iy + ix],2);
+                                //        }
+                                //    }
+                                //}
                                 //std::cout << layer << " conv max deltas:" << max_deltas << " " << max_prev_deltas << std::endl;
                                 break;
                             }
@@ -1633,30 +1739,30 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case DECONVOLUTIONAL_LAYER :
                         {
-                            if(g->n_locked[layer] == false)
-                            {
-                                long M = g->n_features[layer];
-                                long N = g->n_features[layer+1];
-                                long kx = g->kx[layer];
-                                long ky = g->ky[layer];
-                                long nx = g->nx[layer];
-                                long ny = g->ny[layer];
-                                long wx = (kx/2);
-                                long wy = (ky/2);
-                                long dx = nx - wx*2;
-                                long dy = ny - wy*2;
-                                for(long i=0;i<N*dx*dy;i++)
-                                {
-                                        g->partial_weights_bias[layer][i] += 
-                                            ( 
-                                                (
-                                                    g->deltas[layer+1][i] 
-                                                )
-                                              
-                                            - g->partial_weights_bias[layer][i] 
-                                            ) * avg_factor;
-                                }
-                            }
+                            //if(g->n_locked[layer] == false)
+                            //{
+                            //    long M = g->n_features[layer];
+                            //    long N = g->n_features[layer+1];
+                            //    long kx = g->kx[layer];
+                            //    long ky = g->ky[layer];
+                            //    long nx = g->nx[layer];
+                            //    long ny = g->ny[layer];
+                            //    long wx = (kx/2);
+                            //    long wy = (ky/2);
+                            //    long dx = nx - wx*2;
+                            //    long dy = ny - wy*2;
+                            //    for(long i=0;i<N*dx*dy;i++)
+                            //    {
+                            //            g->partial_weights_bias[layer][i] += 
+                            //                ( 
+                            //                    (
+                            //                        g->deltas[layer+1][i] 
+                            //                    )
+                            //                  
+                            //                - g->partial_weights_bias[layer][i] 
+                            //                ) * avg_factor;
+                            //    }
+                            //}
                             break;
                         }
                     case IDENTITY_LAYER :
@@ -1680,21 +1786,24 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
-                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            if(g->n_locked[layer] == false)
                             {
-                                for(long j=0;j<g->n_nodes[layer];j++)
+                                for(long i=0;i<g->n_nodes[layer+1];i++)
                                 {
-                                        g->partial_weights_neuron[layer][i][j] += 
-                                            ( 
-                                                (
-                                                    // dEdy
-                                                    g->deltas[layer+1][i] 
-                                                    // y
-                                                  * g->activation_values[layer][j]
-                                                )
-                                              
-                                            - g->partial_weights_neuron[layer][i][j]
-                                            ) * avg_factor;
+                                    for(long j=0;j<g->n_nodes[layer];j++)
+                                    {
+                                            g->partial_weights_neuron[layer][i][j] += 
+                                                ( 
+                                                    (
+                                                        // dEdy
+                                                        g->deltas[layer+1][i] 
+                                                        // y
+                                                      * g->activation_values[layer][j]
+                                                    )
+                                                  
+                                                - g->partial_weights_neuron[layer][i][j]
+                                                ) * avg_factor;
+                                    }
                                 }
                             }
                             break;
@@ -1805,106 +1914,106 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         }
                     case DECONVOLUTIONAL_LAYER :
                         {
-                            if(g->n_locked[layer] == false)
-                            {
-                                long M = g->n_features[layer];
-                                long N = g->n_features[layer+1];
-                                long kx = g->kx[layer];
-                                long ky = g->ky[layer];
-                                long nx = g->nx[layer];
-                                long ny = g->ny[layer];
-                                long wx = (kx/2);
-                                long wy = (ky/2);
-                                long dx = nx - wx*2;
-                                long dy = ny - wy*2;
-                                {
-                                    for(long n=0;n<N;n++)
-                                    {
-                                        for(long ty=0;ty<ky;ty++)
-                                        {
-                                            for(long m=0;m<M;m++)
-                                            {
-                                                for(long tx=0;tx<kx;tx++)
-                                                {
-                                                    long x = kx*m+tx;
-                                                    long y = ky*n+ty;
-                                                    g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                T max_disp = 0;
-                                T max_wght = 0;
-                                T tmp_disp;
-                                T fact = 1.0;
-                                for(long n=0;n<N;n++)
-                                {
-                                    for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
-                                    {
-                                        //std::cout << m << '\t' << tx << '\t' << kx*m+tx << std::endl;
-                                        //std::cout << n << '\t' << ty << '\t' << ky*n+ty << std::endl;
-                                        T sum_deltas = 0;
-                                        T sum_activation = 0;
-                                        for(long m=0;m<M;m++)
-                                        {
-                                            for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
-                                            {
-                                                for(long vy=0;vy<dy;vy++)
-                                                for(long vx=0;vx<dx;vx++)
-                                                {
-                                                    long iy = vy+wy;
-                                                    long ix = vx+wx;
-                                                    g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
-                                                            (
-                                                                // dEdy
-                                                                g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
-                                                                // y
-                                                              * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
-                                                            ) * fact
-                                                            ;
-                                                    //sum_deltas += g->deltas[layer+1][(dx*dy)*n + dx*vy + vx];
-                                                    //sum_activation += g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
-                                                }
-                                            }
-                                        }
-                                        //std::cout << sum_deltas << '\t' << sum_activation << std::endl;
-                                    }
-                                }
-                                //{
-                                //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-                                //    for(long i=0;i<ky*N;i++)
-                                //    {
-                                //        T sum = 0;
-                                //        for(long j=0;j<kx*M;j++)
-                                //        {
-                                //            sum += g->mu_partial_weights_neuron[layer][i][j];
-                                //        }
-                                //        std::cout << ">>>\t" << layer << '\t' << i << '\t' << sum << std::endl;
-                                //    }
-                                //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-                                //}
-                                {
-                                    for(long n=0;n<N;n++)
-                                    {
-                                        for(long ty=0;ty<ky;ty++)
-                                        {
-                                            for(long m=0;m<M;m++)
-                                            {
-                                                for(long tx=0;tx<kx;tx++)
-                                                {
-                                                    g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] +=
-                                                      (
-                                                          g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                      -   g->   partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
-                                                      ) * avg_factor
-                                                      ;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            //if(g->n_locked[layer] == false)
+                            //{
+                            //    long M = g->n_features[layer];
+                            //    long N = g->n_features[layer+1];
+                            //    long kx = g->kx[layer];
+                            //    long ky = g->ky[layer];
+                            //    long nx = g->nx[layer];
+                            //    long ny = g->ny[layer];
+                            //    long wx = (kx/2);
+                            //    long wy = (ky/2);
+                            //    long dx = nx - wx*2;
+                            //    long dy = ny - wy*2;
+                            //    {
+                            //        for(long n=0;n<N;n++)
+                            //        {
+                            //            for(long ty=0;ty<ky;ty++)
+                            //            {
+                            //                for(long m=0;m<M;m++)
+                            //                {
+                            //                    for(long tx=0;tx<kx;tx++)
+                            //                    {
+                            //                        long x = kx*m+tx;
+                            //                        long y = ky*n+ty;
+                            //                        g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] = 0;
+                            //                    }
+                            //                }
+                            //            }
+                            //        }
+                            //    }
+                            //    T max_disp = 0;
+                            //    T max_wght = 0;
+                            //    T tmp_disp;
+                            //    T fact = 1.0;
+                            //    for(long n=0;n<N;n++)
+                            //    {
+                            //        for(long ty=0,fy=-wy;ty<ky;ty++,fy++)
+                            //        {
+                            //            //std::cout << m << '\t' << tx << '\t' << kx*m+tx << std::endl;
+                            //            //std::cout << n << '\t' << ty << '\t' << ky*n+ty << std::endl;
+                            //            T sum_deltas = 0;
+                            //            T sum_activation = 0;
+                            //            for(long m=0;m<M;m++)
+                            //            {
+                            //                for(long tx=0,fx=-wx;tx<kx;tx++,fx++)
+                            //                {
+                            //                    for(long vy=0;vy<dy;vy++)
+                            //                    for(long vx=0;vx<dx;vx++)
+                            //                    {
+                            //                        long iy = vy+wy;
+                            //                        long ix = vx+wx;
+                            //                        g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx] += 
+                            //                                (
+                            //                                    // dEdy
+                            //                                    g->deltas[layer+1][(dx*dy)*n + dx*vy + vx] 
+                            //                                    // y
+                            //                                  * g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)]
+                            //                                ) * fact
+                            //                                ;
+                            //                        //sum_deltas += g->deltas[layer+1][(dx*dy)*n + dx*vy + vx];
+                            //                        //sum_activation += g->activation_values[layer][(nx*ny)*m + nx*(iy+fy) + (ix+fx)];
+                            //                    }
+                            //                }
+                            //            }
+                            //            //std::cout << sum_deltas << '\t' << sum_activation << std::endl;
+                            //        }
+                            //    }
+                            //    //{
+                            //    //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+                            //    //    for(long i=0;i<ky*N;i++)
+                            //    //    {
+                            //    //        T sum = 0;
+                            //    //        for(long j=0;j<kx*M;j++)
+                            //    //        {
+                            //    //            sum += g->mu_partial_weights_neuron[layer][i][j];
+                            //    //        }
+                            //    //        std::cout << ">>>\t" << layer << '\t' << i << '\t' << sum << std::endl;
+                            //    //    }
+                            //    //    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+                            //    //}
+                            //    {
+                            //        for(long n=0;n<N;n++)
+                            //        {
+                            //            for(long ty=0;ty<ky;ty++)
+                            //            {
+                            //                for(long m=0;m<M;m++)
+                            //                {
+                            //                    for(long tx=0;tx<kx;tx++)
+                            //                    {
+                            //                        g->partial_weights_neuron[layer][ky*n+ty][kx*m+tx] +=
+                            //                          (
+                            //                              g->tmp_partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                            //                          -   g->   partial_weights_neuron[layer][ky*n+ty][kx*m+tx]
+                            //                          ) * avg_factor
+                            //                          ;
+                            //                    }
+                            //                }
+                            //            }
+                            //        }
+                            //    }
+                            //}
                             break;
                         }
                     case IDENTITY_LAYER :

@@ -1,8 +1,8 @@
 
 DIR=`basename ${PWD}`
 
-#DATA=$PROJECT_HOME/data/$DIR/numbers.bmp
-DATA=$PROJECT_HOME/data/$DIR/digits_mnist.bmp
+DATA=$PROJECT_HOME/data/$DIR/numbers.bmp
+#DATA=$PROJECT_HOME/data/$DIR/digits_mnist.bmp
 
 SNAPSHOTS=$PROJECT_HOME/snapshots/$DIR/
 

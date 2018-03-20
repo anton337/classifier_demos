@@ -17,7 +17,7 @@ export PROJECT=convolutional_rbm_auto_encoder
 
 ./build.sh
 
-./run_project.sh
+#./run_project.sh
 
-#./debug_project.sh
+./debug_project.sh
 
