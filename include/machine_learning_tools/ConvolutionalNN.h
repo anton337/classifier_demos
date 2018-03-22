@@ -59,6 +59,7 @@ struct cnn_training_info
     std::vector<long> pooling_factorx;
     std::vector<long> pooling_factory;
     T **  activation_values;
+    long **  switches;
     T **  deltas;
     long n_variables;
     long n_labels;
@@ -95,6 +96,11 @@ struct cnn_training_info
         smallest_index = 0;
         partial_error = 0;
         activation_values  = new T*[n_nodes.size()];
+        switches = new long*[n_nodes.size()];
+        for(long layer = 0;layer < n_nodes.size();layer++)
+        {
+            switches[layer] = NULL;
+        }
         for(long layer = 0;layer < n_nodes.size();layer++)
         {
             switch(n_layer_type[layer])
@@ -184,6 +190,7 @@ struct cnn_training_info
                             exit(1);
                         }
                         activation_values [layer] = new T[M*nx[layer]*ny[layer]];
+                        switches [layer] = new long[M*nx[layer]*ny[layer]];
                         break;
                     }
                 case MAX_UNPOOLING_LAYER :
@@ -407,8 +414,6 @@ struct cnn_training_info
                         long wy = (ky[layer-1]/2);
                         long dx = nx[layer-1] + wx*2;
                         long dy = ny[layer-1] + wy*2;
-                        std::cout << "deconvolutional" << std::endl;
-                        std::cout << "dx:" << dx << '\t' << "dy:" << dx << '\t' << "N:" << N << std::endl;
                         if(n_nodes[layer] != N*dx*dy)
                         {
                             std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
@@ -553,8 +558,6 @@ struct cnn_training_info
                         long wy = (ky[layer-1]/2);
                         long dx = nx[layer-1] + wx*2;
                         long dy = ny[layer-1] + wy*2;
-                        std::cout << "deconvolutional" << std::endl;
-                        std::cout << "dx:" << dx << '\t' << "dy:" << dx << '\t' << "N:" << N << std::endl;
                         if(n_nodes[layer] != N*dx*dy)
                         {
                             std::cout << "layer " << layer << " n_nodes deconvolutional is: " << n_nodes[layer] << " should be: " << N*dx*dy << std::endl;
@@ -603,8 +606,15 @@ struct cnn_training_info
         for(long layer = 0;layer < n_nodes.size();layer++)
         {
             delete [] activation_values [layer];
+            if(  n_layer_type[layer] ==  MAX_POOLING_LAYER
+              || n_layer_type[layer] == MEAN_POOLING_LAYER
+              )
+            {
+                delete [] switches[layer];
+            }
         }
         delete [] activation_values;
+        delete [] switches;
         for(long layer = 0;layer < n_nodes.size();layer++)
         {
             delete [] deltas [layer];
@@ -1224,6 +1234,8 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                             long dx = nx / factorx;
                             long dy = ny / factory;
                             T tmp_val,max_val;
+                            long sx = 0;
+                            long sy = 0;
 
                             for(long m=0,i=0;m<M;m++)
                             {
@@ -1234,12 +1246,20 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*(y+ty)+(x+tx)];
+                                        g->switches[layer][m*nx*ny+nx*(y+ty)+(x+tx)] = 0;
+                                    }
+                                    for(long ty=0;ty<factory;ty++)
+                                    for(long tx=0;tx<factorx;tx++)
+                                    {
+                                        tmp_val = g->activation_values[layer][m*nx*ny+nx*(y+ty)+(x+tx)];
                                         if(tmp_val>max_val)
                                         {
                                           max_val = tmp_val;
+                                          sx = tx;
+                                          sy = ty;
                                         }
                                     }
+                                    g->switches[layer][m*nx*ny+nx*(y+sy)+(x+sx)] = 1;
                                     g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = max_val;
                                 }
                             }
@@ -1268,7 +1288,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        mean_val += g->activation_values[layer][m*nx*nx+nx*(y+ty)+(x+tx)];
+                                        mean_val += g->activation_values[layer][m*nx*ny+nx*(y+ty)+(x+tx)];
                                     }
                                     g->activation_values[layer+1][m*dx*dy+dx*oy+ox] = mean_val * factor;
                                 }
@@ -1279,11 +1299,11 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         {
                             // j : n_nodes[layer  ] = curr size = M * nx * ny
                             // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer];
-                            long nx = g->nx[layer];
-                            long ny = g->ny[layer];
-                            long factorx = g->pooling_factorx[layer];
-                            long factory = g->pooling_factory[layer];
+                            long M = g->n_features[layer-1];
+                            long nx = g->nx[layer-1];
+                            long ny = g->ny[layer-1];
+                            long factorx = g->pooling_factorx[layer-1];
+                            long factory = g->pooling_factory[layer-1];
                             long dx = nx * factorx;
                             long dy = ny * factory;
                             T tmp_val,max_val;
@@ -1293,11 +1313,18 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                 for(long y=0,oy=0;y<ny;y+=factory,oy++)
                                 for(long x=0,ox=0;x<nx;x+=factorx,ox++)
                                 {
+                                    tmp_val = g->activation_values[layer][m*nx*ny+nx*oy+ox];
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*oy+ox];
-                                        g->activation_values[layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] = tmp_val;
+                                        if(g->switches[g->n_layers-layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] > 0.5)
+                                        {
+                                            g->activation_values[layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] = tmp_val;
+                                        }
+                                        else
+                                        {
+                                            g->activation_values[layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] = 0;
+                                        }
                                     }
                                 }
                             }
@@ -1307,11 +1334,11 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                         {
                             // j : n_nodes[layer  ] = curr size = M * nx * ny
                             // i : n_nodes[layer+1] = next size = N * dx * dy
-                            long M = g->n_features[layer];
-                            long nx = g->nx[layer];
-                            long ny = g->ny[layer];
-                            long factorx = g->pooling_factorx[layer];
-                            long factory = g->pooling_factory[layer];
+                            long M = g->n_features[layer-1];
+                            long nx = g->nx[layer-1];
+                            long ny = g->ny[layer-1];
+                            long factorx = g->pooling_factorx[layer-1];
+                            long factory = g->pooling_factory[layer-1];
                             long dx = nx * factorx;
                             long dy = ny * factory;
                             T tmp_val,mean_val;
@@ -1325,7 +1352,7 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                                     for(long ty=0;ty<factory;ty++)
                                     for(long tx=0;tx<factorx;tx++)
                                     {
-                                        tmp_val = g->activation_values[layer][m*nx*nx+nx*oy+ox];
+                                        tmp_val = g->activation_values[layer][m*nx*ny+nx*oy+ox];
                                         g->activation_values[layer+1][m*dx*dy+dx*(y+ty)+(x+tx)] = tmp_val;
                                     }
                                 }
@@ -1696,16 +1723,19 @@ void cnn_training_worker(long n_threads,long iter,cnn_training_info<T> * g,std::
                 {
                     case FULLY_CONNECTED_LAYER :
                         {
-                            for(long i=0;i<g->n_nodes[layer+1];i++)
+                            if(g->n_locked[layer] == false)
                             {
-                                    g->partial_weights_bias[layer][i] += 
-                                        ( 
-                                            (
-                                                g->deltas[layer+1][i] 
-                                            )
-                                          
-                                        - g->partial_weights_bias[layer][i] 
-                                        ) * avg_factor;
+                                for(long i=0;i<g->n_nodes[layer+1];i++)
+                                {
+                                        g->partial_weights_bias[layer][i] += 
+                                            ( 
+                                                (
+                                                    g->deltas[layer+1][i] 
+                                                )
+                                              
+                                            - g->partial_weights_bias[layer][i] 
+                                            ) * avg_factor;
+                                }
                             }
                             break;
                         }
