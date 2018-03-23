@@ -72,11 +72,11 @@ int main(int argc,char ** argv)
     features.push_back(    1);
     features.push_back( 80+1);
     features.push_back( 80+1);
-    features.push_back(160+1);
-    features.push_back(160+1);
-    features.push_back(320+1);
-    features.push_back(160+1);
-    features.push_back(160+1);
+    features.push_back(160/2+1);
+    features.push_back(160/2+1);
+    features.push_back(320/4+1);
+    features.push_back(160/2+1);
+    features.push_back(160/2+1);
     features.push_back( 80+1);
     features.push_back( 80+1);
     features.push_back(    1);
@@ -225,6 +225,97 @@ int main(int argc,char ** argv)
                 , layer_pooling_factorx
                 , layer_pooling_factory
                 ); 
+
+
+    std::vector < ConvolutionalRBM < double > * > rbms;
+
+    std::vector < double * > rbm_dat;
+
+    long N = 3;
+
+    for(long i=0;i<N;i++)
+    {
+        rbm_dat . push_back ( new double [ (long)nsamp 
+                                         * features[2*i] 
+                                         * layer_nx[2*i+0] 
+                                         * layer_ny[2*i+0] 
+                                         ] 
+                            );
+    }
+
+    for(long k=0,size=(long)nsamp*features[0]*layer_nx[0]*layer_ny[0];k<size;k++)
+    {
+        rbm_dat[0][k] = dat[k];
+    }
+
+    std::vector<double> epsilon;
+    epsilon.push_back(1e-1);
+    epsilon.push_back(1e-5);
+    epsilon.push_back(1e-3);
+
+    for(long i=0;i<N;i++)
+    {
+        ConvolutionalRBM < double > * rbm = 
+          new ConvolutionalRBM < double > 
+          (
+            features[2*i+0] * layer_nx[2*i+0] * layer_ny[2*i+0]
+          , features[2*i+1] * layer_nx[2*i+1] * layer_ny[2*i+1]
+          , layer_nx[2*i+0]
+          , layer_ny[2*i+0]
+          , layer_nx[2*i+1]
+          , layer_ny[2*i+1]
+          , layer_kx[2*i+0]
+          , layer_ky[2*i+0]
+          , features[2*i+0]
+          , features[2*i+1]
+          , nsamp
+          , rbm_dat[i]
+          , i==0
+          );
+
+        for(long iter=0;iter<1000;iter++)
+        {
+            rbm -> init(0);
+            rbm -> cd(1,epsilon[i],0);
+            std::cout << iter << '\t' << rbm -> final_error << std::endl;
+        }
+
+        rbms . push_back ( rbm );
+
+        if(i+1<N)
+        {
+            long nx = layer_nx[2*i+1];
+            long ny = layer_ny[2*i+1];
+            long K  = features[2*i+1];
+            long dx = layer_nx[2*i+2];
+            long dy = layer_ny[2*i+2];
+            long kx = layer_kx[2*i+1];
+            long ky = layer_ky[2*i+1];
+            for(long n=0,k=0,size=(long)nsamp;n<size;n++)
+            {
+                double max_value;
+                for(long l=0;l<K;l++)
+                {
+                    for(long y=0;y<dy;y++)
+                    {
+                        for(long x=0;x<dx;x++,k++)
+                        {
+                            max_value = -1000000;
+                            for(long _y=0;_y<ky;_y++)
+                            {
+                                for(long _x=0;_x<kx;_x++)
+                                {
+                                    max_value = (max_value>rbm->hid[n*K*dx*dy+l*dx*dy+(ky*y+_y)*dx+(kx*x+_x)])
+                                              ?  max_value:rbm->hid[n*K*dx*dy+l*dx*dy+(ky*y+_y)*dx+(kx*x+_x)];
+                                }
+                            }
+                            rbm_dat[i+1][k] = max_value;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /*
     {
