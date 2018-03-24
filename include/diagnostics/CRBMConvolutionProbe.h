@@ -92,25 +92,27 @@ struct CRBMConvolutionProbe
         {
           for(long x=0;x<crbm->nx;x++)
             for(long y=0;y<crbm->ny;y++,k++,t++)
+            if(fabs(crbm->vis[k]-crbm->vis0[k]) > 1e-10)
             {
-              //input_dat[t] = fabs(crbm->vis[k] - crbm->vis0[k]);
-              input_dat[t] = fabs(crbm->vis0[k]);
+              //input_dat[t] = (crbm->vis[k]-crbm->vis0[k]);
+              input_dat[t] = (crbm->vis[k]);
+              //input_dat[t] = (crbm->vis0[k]);
             }
         }
     }
 
     void get_neuron_outputs(ConvolutionalRBM<T> * crbm,long index)
     {
-        T min_val = 1000000;
-        T max_val =-1000000;
+        //T min_val = 1000000;
+        //T max_val =-1000000;
         for(long n=0,t=0,k=crbm->h*index;n<crbm->K;n++)
         {
           for(long x=0;x<crbm->dx;x++)
             for(long y=0;y<crbm->dy;y++,k++,t++)
             {
               output_dat[t] = crbm->hid[k];
-              min_val = (output_dat[t]<min_val)?output_dat[t]:min_val;
-              max_val = (output_dat[t]>max_val)?output_dat[t]:max_val;
+              //min_val = (output_dat[t]<min_val)?output_dat[t]:min_val;
+              //max_val = (output_dat[t]>max_val)?output_dat[t]:max_val;
             }
         }
         //std::cout << min_val << '\t' << max_val << std::endl;

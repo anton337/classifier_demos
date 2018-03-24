@@ -211,7 +211,7 @@ void vis2hid_worker ( worker_dat<T> * g
           H[k*h+j] += W[m*K*Kx*Ky+z*Kx*Ky+i] * X[m*nx*ny+k*v+nx*iy+ix];
         }
         //H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
-        H[k*h+j] = 10*atan(0.1*H[k*h+j]);
+        H[k*h+j] = 100*atan(0.01*H[k*h+j]);
       }
     }
   }
@@ -266,11 +266,11 @@ void hid2vis_worker ( worker_dat<T> * g
     for(long iy=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
-      if ( ix      >= wx 
-        && ix+wx <  nx
-        && iy      >= wy
-        && iy+wy <  ny
-         )
+      //if ( ix      >= wx 
+      //  && ix+wx <  nx
+      //  && iy      >= wy
+      //  && iy+wy <  ny
+      //   )
       {
         V[k*v+i] = b[i];
         for(long z=0;z<K;z++)
@@ -286,13 +286,13 @@ void hid2vis_worker ( worker_dat<T> * g
           }
         }
         //V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
-        V[k*v+i] = 10*atan(0.1*V[k*v+i]);
+        V[k*v+i] = 100*atan(0.01*V[k*v+i]);
       }
-      else
-      {
-        // do nothing, keep original values of V
-        //V[k*v+i] = 0;
-      }
+      //else
+      //{
+      //  // do nothing, keep original values of V
+      //  //V[k*v+i] = 0;
+      //}
     }
   }
   
@@ -397,6 +397,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
                    , long _n
                    , T* _X
                    , bool gabor = true
+                   , long _Nrot = 5
                    )
   {
     //for(long k=0;k<100;k++)
@@ -440,12 +441,12 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
         {
             W[i] = (x==kx/2&&y==ky/2)?1.0/M:0;
             if(gabor==false && m!=k)
-            W[i] = ((0.01/M)*(1.0 - 2*(rand()%10000)/10000.0f));
+            W[i] = 0*((0.0001/M)*(1.0 - 2*(rand()%10000)/10000.0f));
         }
       }
       else
       {
-        long Nrot = 5;
+        long Nrot = _Nrot;
         long J = 1 + Nrot*(k-1)/(K-1);
         //long J = 1;
         std::cout << J << std::endl;
