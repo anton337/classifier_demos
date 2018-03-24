@@ -11,7 +11,8 @@
 #export PROJECT=salt_classifier
 #export PROJECT=convolutional_rbm
 #export PROJECT=afi_convolutional_rbm
-export PROJECT=convolutional_rbm_auto_encoder
+#export PROJECT=convolutional_rbm_auto_encoder
+export PROJECT=cat_classifier
 
 ./clean.sh
 
