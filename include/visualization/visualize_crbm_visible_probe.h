@@ -186,8 +186,8 @@ struct VisualizeCRBMVisibleProbe : public Display < T >
                     for(long ix=0;ix<p_crbm_convolution_probe->in_input_grid_nx;ix++,k++)
                     {
                         val  = p_crbm_convolution_probe ->  input_dat [ k ] ;
-                        val = 0.5f*(val - min_val)/(max_val-min_val);
-                        val += 0.5;
+                        //val = 1.0f*(val - min_val)/(max_val-min_val);
+                        //val += 0.0;
                         glColor3f(val,val,val);
                         glVertex3f( min_x + (max_x-min_x)*(out_dx * ox + out_dx * in_dx* ix     )
                                   , min_y + (max_y-min_y)*(out_dy * oy + out_dy * in_dy* iy     )

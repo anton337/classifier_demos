@@ -87,10 +87,11 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
     // dW       [M x K x kx x ky]
     // vis      [M x nx x ny]
     // hid      [K x dx x dy]
+    T sum = 0;
     for(long m=0;m<M;m++)
     for(long z=0;z<K;z++)
     {
-        T sum = 0;
+      //std::cout << M << '\t' << K << std::endl;
         for(long oy=0;oy<dy;oy++)
         for(long ox=0;ox<dx;ox++)
         for(long ky=-wy,i=0;ky<=wy;ky++)
@@ -102,7 +103,7 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
           long ix = ox+wx+kx;
           // flipped here
           g->partial_dW[m*K*Kx*Ky+z*Kx*Ky+i] -= factor * (g->vis0[m*nx*ny+k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[m*nx*ny+k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
-          //sum += fabs(g->partial_dW[z*Kx*Ky+i]);
+          sum += fabs(g->partial_dW[m*K*Kx*Ky+z*Kx*Ky+i]);
         }
         //for(long ky=-wy,i=0;ky<=wy;ky++)
         //for(long kx=-wx;kx<=wx;kx++,i++)
@@ -110,12 +111,13 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
         //  //g->partial_dW[z*Kx*Ky+i] /= sum;
         //}
     }
+    //std::cout << "sum:" << sum << std::endl;
 
     for(long z=0;z<K;z++)
     for(long oy=0,j=0;oy<dy;oy++)
     for(long ox=0;ox<dx;ox++,j++)
     {
-      g->partial_dc[z*dx*dx+j] -= factor * (g->hid0[z*dx*dy+k*h+j]*g->hid0[z*dx*dy+k*h+j] - g->hid[z*dx*dy+k*h+j]*g->hid[z*dx*dy+k*h+j]);
+      g->partial_dc[z*dx*dy+j] -= factor * (g->hid0[z*dx*dy+k*h+j]*g->hid0[z*dx*dy+k*h+j] - g->hid[z*dx*dy+k*h+j]*g->hid[z*dx*dy+k*h+j]);
     }
 
     for(long m=0;m<M;m++)
@@ -211,6 +213,8 @@ void vis2hid_worker ( worker_dat<T> * g
           H[k*h+j] += W[m*K*Kx*Ky+z*Kx*Ky+i] * X[m*nx*ny+k*v+nx*iy+ix];
         }
         //H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
+        //H[k*h+j] = atan(H[k*h+j]);
+        //H[k*h+j] = 10.0f*atan(0.1f*H[k*h+j]);
         H[k*h+j] = 100*atan(0.01*H[k*h+j]);
       }
     }
@@ -281,11 +285,13 @@ void hid2vis_worker ( worker_dat<T> * g
           long ox=ix-wx+kx;
           if(oy>=0&&oy<dy&&ox>=0&&ox<dx)
           {
-            V[k*v+i] += W[m*K*Kx*Ky+z*Kx*Ky+Kx*fy+fx] * H[k*h+dx*oy+ox]; // W is flipped here!
-            //V[k*v+i] += W[z*Kx*Ky+Kx*ty+tx] * H[k*h+dx*oy+ox]; 
+            V[k*v+i] += W[m*K*Kx*Ky+z*Kx*Ky+Kx*fy+fx] * H[k*h+z*dx*dy+dx*oy+ox]; // W is flipped here!
+            //V[k*v+i] += W[z*Kx*Ky+Kx*ty+tx] * H[k*h+z*dx*dy+dx*oy+ox]; 
           }
         }
         //V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
+        //V[k*v+i] = atan(V[k*v+i]);
+        //V[k*v+i] = 10.0f*atan(0.1f*V[k*v+i]);
         V[k*v+i] = 100*atan(0.01*V[k*v+i]);
       }
       //else
@@ -416,6 +422,8 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
     K = _K;
     n = _n;
 
+    //std::cout << "   M :    " << M << std::endl;
+
     // error checks
     if(kx % 2 == 0){std::cout << "kx needs to be odd" << std::endl;exit(1);}
     if(ky % 2 == 0){std::cout << "ky needs to be odd" << std::endl;exit(1);}
@@ -439,9 +447,13 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
         for(long x=0,j=0;x<kx;x++)
         for(long y=0;y<ky;y++,i++,j++)
         {
-            W[i] = (x==kx/2&&y==ky/2)?1.0/M:0;
+            //W[i] = (x==kx/2&&y+k/M==ky/2)?1.0/(M*_Nrot):0;
+            W[i] = (x==kx/2&&y==ky/2)?1.0:0;
+            //if(gabor==false && m!=(k%M))
             if(gabor==false && m!=k)
-            W[i] = 0*((0.0001/M)*(1.0 - 2*(rand()%10000)/10000.0f));
+            //if(gabor==false && (m!=0 || k!=0))
+            //if(gabor==false)
+            W[i] = ((0.01)*(1.0 - 2*(rand()%10000)/10000.0f));
         }
       }
       else
@@ -455,7 +467,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
                               , (double)kx/J                    // lambda
                               , Nrot*2*M_PI*(double)(k-1)/(K-1) // theta
                               , M_PI/2                          // phi
-                              , (double)kx/2                    // sigma
+                              , (double)kx/4                    // sigma
                               , 1.0                             // gamma
                               );
         for(long x=0,j=0;x<kx;x++)
@@ -506,6 +518,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
 
   void cd(long nGS,T epsilon,int offset=0,bool bottleneck=false)
   {
+    //std::cout << " M : " << M << std::endl;
     boost::posix_time::ptime time_0(boost::posix_time::microsec_clock::local_time());
     //std::cout << "cd" << std::endl;
 
@@ -631,6 +644,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
                        , T * err
                        )
   {
+    //std::cout << "M:" << M << std::endl;
     boost::posix_time::ptime time_0(boost::posix_time::microsec_clock::local_time());
 
     std::vector<boost::thread*> threads;

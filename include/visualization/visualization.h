@@ -26,6 +26,14 @@ std::vector < Display < double > * > displays;
 std::vector < Display < float  > * > displays;
 #endif
 
+float scale_x = 1;
+float scale_y = 1;
+float scale_z = 1;
+
+float offset_x = 0;
+float offset_y = 0;
+float offset_z = 0;
+
 template<typename T>
 void addDisplay(Display<T> * display)
 {
@@ -49,9 +57,9 @@ void draw(void)
         displays[i] -> update ();
     }
 
-    change_pos_index = false;
-    change_neg_index = false;
-    change_up_index = false;
+    change_pos_index  = false;
+    change_neg_index  = false;
+    change_up_index   = false;
     change_down_index = false;
 
 }
@@ -59,7 +67,16 @@ void draw(void)
 void display(void)
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glPushMatrix();
+  glLoadIdentity();
+  glMatrixMode(GL_MODELVIEW);
+  gluLookAt ( 0.0 , 0.0 , 2.75 ,  /* eye is at (0,0,5) */
+              0.0 , 0.0 , 0.0  ,      /* center is at (0,0,0) */
+              0.0 , 1.0 , 0.0  );      /* up is in positive Y direction */
+  glScalef(scale_x,scale_y,scale_z);
+  glTranslatef(offset_x,offset_y,offset_z);
   draw();
+  glPopMatrix();
   glutSwapBuffers();
 }
 
@@ -98,6 +115,10 @@ void keyboard(unsigned char Key, int x, int y)
     case 'n':scale_factor/=1.1;std::cout << scale_factor << std::endl;break;
     case 'k':scale_factor_2*=1.1;std::cout << scale_factor_2 << std::endl;break;
     case 'j':scale_factor_2/=1.1;std::cout << scale_factor_2 << std::endl;break;
+    case '2':offset_y+=0.01;break;
+    case '8':offset_y-=0.01;break;
+    case '4':offset_x+=0.01;break;
+    case '6':offset_x-=0.01;break;
     case 27:
       {
         exit(1);
