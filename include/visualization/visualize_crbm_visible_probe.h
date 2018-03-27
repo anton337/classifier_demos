@@ -185,7 +185,7 @@ struct VisualizeCRBMVisibleProbe : public Display < T >
                 {
                     for(long ix=0;ix<p_crbm_convolution_probe->in_input_grid_nx;ix++,k++)
                     {
-                        val  = p_crbm_convolution_probe ->  input_dat [ k ] ;
+                        val  = SCALE*p_crbm_convolution_probe ->  input_dat [ k ] ;
                         //val = 1.0f*(val - min_val)/(max_val-min_val);
                         //val += 0.0;
                         glColor3f(val,val,val);

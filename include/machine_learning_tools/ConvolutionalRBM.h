@@ -62,7 +62,7 @@ struct crbm_gradient_info
 };
 
 template<typename T>
-void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vrtx)
+void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<std::pair<long,long> > const & vrtx)
 {
   
   long Ky = g->ky;
@@ -83,12 +83,12 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
   
   for(long t=0;t<vrtx.size();t++)
   {
-    long k = vrtx[t];
+    long k = vrtx[t].first;
+    long m = vrtx[t].second;
     // dW       [M x K x kx x ky]
     // vis      [M x nx x ny]
     // hid      [K x dx x dy]
-    T sum = 0;
-    for(long m=0;m<M;m++)
+    //T sum = 0;
     for(long z=0;z<K;z++)
     {
       //std::cout << M << '\t' << K << std::endl;
@@ -103,7 +103,7 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
           long ix = ox+wx+kx;
           // flipped here
           g->partial_dW[m*K*Kx*Ky+z*Kx*Ky+i] -= factor * (g->vis0[m*nx*ny+k*v+iy*nx+ix]*g->hid0[z*dx*dy+k*h+oy*dx+ox] - g->vis[m*nx*ny+k*v+iy*nx+ix]*g->hid[z*dx*dy+k*h+oy*dx+ox]);
-          sum += fabs(g->partial_dW[m*K*Kx*Ky+z*Kx*Ky+i]);
+          //sum += fabs(g->partial_dW[m*K*Kx*Ky+z*Kx*Ky+i]);
         }
         //for(long ky=-wy,i=0;ky<=wy;ky++)
         //for(long kx=-wx;kx<=wx;kx++,i++)
@@ -113,21 +113,20 @@ void crbm_gradient_worker(crbm_gradient_info<T> * g,std::vector<long> const & vr
     }
     //std::cout << "sum:" << sum << std::endl;
 
-    for(long z=0;z<K;z++)
-    for(long oy=0,j=0;oy<dy;oy++)
-    for(long ox=0;ox<dx;ox++,j++)
-    {
-      g->partial_dc[z*dx*dy+j] -= factor * (g->hid0[z*dx*dy+k*h+j]*g->hid0[z*dx*dy+k*h+j] - g->hid[z*dx*dy+k*h+j]*g->hid[z*dx*dy+k*h+j]);
-    }
+    //for(long z=0;z<K;z++)
+    //for(long oy=0,j=0;oy<dy;oy++)
+    //for(long ox=0;ox<dx;ox++,j++)
+    //{
+    //  g->partial_dc[z*dx*dy+j] -= factor * (g->hid0[z*dx*dy+k*h+j]*g->hid0[z*dx*dy+k*h+j] - g->hid[z*dx*dy+k*h+j]*g->hid[z*dx*dy+k*h+j]);
+    //}
 
-    for(long m=0;m<M;m++)
-    for(long iy=0,i=0;iy<ny;iy++)
-    for(long ix=0;ix<nx;ix++,i++)
-    {
-      g->partial_db[i] -= factorb * (g->vis0[m*nx*ny+k*v+i]*g->vis0[m*nx*ny+k*v+i] - g->vis[m*nx*ny+k*v+i]*g->vis[m*nx*ny+k*v+i]);
-    }
+    //for(long m=0;m<M;m++)
+    //for(long iy=0,i=0;iy<ny;iy++)
+    //for(long ix=0;ix<nx;ix++,i++)
+    //{
+    //  g->partial_db[i] -= factorb * (g->vis0[m*nx*ny+k*v+i]*g->vis0[m*nx*ny+k*v+i] - g->vis[m*nx*ny+k*v+i]*g->vis[m*nx*ny+k*v+i]);
+    //}
 
-    for(long m=0;m<M;m++)
     for(long iy=0,i=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
@@ -179,7 +178,7 @@ void vis2hid_worker ( worker_dat<T> * g
                     ,       T   * H     // [dx x dy]
                     ,       T   * c     // [dx x dy]
                     ,       T   * W     // [kx x ky]
-                    , std::vector<long> const & vrtx
+                    , std::vector<std::pair<long,long> > const & vrtx
                     )
 {
   
@@ -197,8 +196,9 @@ void vis2hid_worker ( worker_dat<T> * g
   long v = M*nx*ny;
   for(long t=0;t<vrtx.size();t++)
   {
-    long k = vrtx[t];
-    for(long z=0,j=0;z<K;z++)
+    long k = vrtx[t].first;
+    long z = vrtx[t].second;
+    long j = z*dx*dy;
     {
       for(long oy=0;oy<dy;oy++)
       for(long ox=0;ox<dx;ox++,j++)
@@ -247,7 +247,7 @@ void hid2vis_worker ( worker_dat<T> * g
                     ,       T   * V     // [nx x ny]
                     ,       T   * b     // [nx x ny]
                     ,       T   * W     // [kx x ky]
-                    , std::vector<long> const & vrtx
+                    , std::vector<std::pair<long,long> > const & vrtx
                     )
 {
   
@@ -265,8 +265,9 @@ void hid2vis_worker ( worker_dat<T> * g
   long v = M*nx*ny;
   for(long t=0;t<vrtx.size();t++)
   {
-    long k = vrtx[t];
-    for(long m=0,i=0;m<M;m++)
+    long k = vrtx[t].first;
+    long m = vrtx[t].second;
+    long i = m*nx*ny;
     for(long iy=0;iy<ny;iy++)
     for(long ix=0;ix<nx;ix++,i++)
     {
@@ -442,31 +443,32 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
     for(long m=0,i=0;m<M;m++)
     for(long k=0;k<K;k++)
     {
-      if(k==0 || gabor==false)
+      //if(k==0 || gabor==false)
+      if(gabor==false)
       {
         for(long x=0,j=0;x<kx;x++)
         for(long y=0;y<ky;y++,i++,j++)
         {
             //W[i] = (x==kx/2&&y+k/M==ky/2)?1.0/(M*_Nrot):0;
-            W[i] = (x==kx/2&&y==ky/2)?1.0:0;
+            W[i] = (x==kx/2&&y==ky/2)?0.01:0;
             //if(gabor==false && m!=(k%M))
-            if(gabor==false && m!=k)
+            //if(gabor==false && m!=k)
             //if(gabor==false && (m!=0 || k!=0))
-            //if(gabor==false)
+            if(gabor==false)
             W[i] = ((0.01)*(1.0 - 2*(rand()%10000)/10000.0f));
         }
       }
       else
       {
         long Nrot = _Nrot;
-        long J = 1 + Nrot*(k-1)/(K-1);
+        long J = Nrot*(k)/(K);
         //long J = 1;
         std::cout << J << std::endl;
         T * gab = Gabor < T > ( kx                              // nx
                               , ky                              // ny
-                              , (double)kx/J                    // lambda
-                              , Nrot*2*M_PI*(double)(k-1)/(K-1) // theta
-                              , M_PI/2                          // phi
+                              , (double)kx                      // lambda
+                              , Nrot*2*M_PI*(double)(k)/(K)     // theta
+                              , (J+1)*M_PI/2                    // phi
                               , (double)kx/4                    // sigma
                               , 1.0                             // gamma
                               );
@@ -474,7 +476,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
         for(long y=0;y<ky;y++,i++,j++)
         {
             //W[i] = (x==kx/2&&y==ky/2)?1.0:0;
-            W[i] = (gab[j])/M;
+            W[i] = 4*(gab[j])/(kx*ky);
         }
         delete [] gab;
       }
@@ -648,7 +650,7 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
     boost::posix_time::ptime time_0(boost::posix_time::microsec_clock::local_time());
 
     std::vector<boost::thread*> threads;
-    std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
+    std::vector<std::vector<std::pair<long,long> > > vrtx(boost::thread::hardware_concurrency());
     std::vector<crbm_gradient_info<T>*> g;
 
     boost::posix_time::ptime time_1(boost::posix_time::microsec_clock::local_time());
@@ -657,7 +659,10 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
 
     for(long i=0;i<n;i++)
     {
-      vrtx[i%vrtx.size()].push_back(i);
+      for(long j=0;j<M;j++)
+      {
+        vrtx[(i+j)%vrtx.size()].push_back(std::pair<long,long>(i,j));
+      }
     }
     boost::posix_time::ptime time_2(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration21(time_2 - time_1);
@@ -724,10 +729,13 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
     D->K = K;
     D->M = M;
     std::vector<boost::thread*> threads;
-    std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
+    std::vector<std::vector<std::pair<long,long> > > vrtx(boost::thread::hardware_concurrency());
     for(long i=0;i<n;i++)
     {
-      vrtx[i%vrtx.size()].push_back(i);
+      for(long j=0;j<M;j++)
+      {
+        vrtx[(i+j)%vrtx.size()].push_back(std::pair<long,long>(i,j));
+      }
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
@@ -755,10 +763,13 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
     D->K = K;
     D->M = M;
     std::vector<boost::thread*> threads;
-    std::vector<std::vector<long> > vrtx(boost::thread::hardware_concurrency());
+    std::vector<std::vector<std::pair<long,long> > > vrtx(boost::thread::hardware_concurrency());
     for(long i=0;i<n;i++)
     {
-      vrtx[i%vrtx.size()].push_back(i);
+      for(long j=0;j<K;j++)
+      {
+        vrtx[(i+j)%vrtx.size()].push_back(std::pair<long,long>(i,j));
+      }
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {

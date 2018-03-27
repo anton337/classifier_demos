@@ -1,6 +1,7 @@
 #ifndef VISUALIZATION_H
 #define VISUALIZATION_H
 
+float SCALE = 1;
 #include <unistd.h>
 #include <GL/glut.h>
 #include "visualize_data_array.h"
@@ -119,6 +120,8 @@ void keyboard(unsigned char Key, int x, int y)
     case '8':offset_y-=0.01;break;
     case '4':offset_x+=0.01;break;
     case '6':offset_x-=0.01;break;
+    case '[':SCALE/=1.1;break;
+    case ']':SCALE*=1.1;break;
     case 27:
       {
         exit(1);
