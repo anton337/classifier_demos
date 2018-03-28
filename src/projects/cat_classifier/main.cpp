@@ -6,6 +6,7 @@
 #include "MergePerceptrons.h"
 #include "AutoEncoderConstructor.h"
 #include "visualization.h"
+#include "snapshot.h"
 
 long nx = 1600;
 long ny = 1200;
@@ -14,7 +15,7 @@ long kx = 9;
 long ky = 9;
 long dx = nx - (kx/2)*2;
 long dy = ny - (ky/2)*2;
-long N = 8*1;
+long N = 8*2;
 
 long fx = 2;
 long fy = 2;
@@ -26,7 +27,7 @@ long kx1 = 9;
 long ky1 = 9;
 long dx1 = nx1 - (kx1/2)*2;
 long dy1 = ny1 - (ky1/2)*2;
-long N1 = (8)*2;
+long N1 = (8)*3;
 
 long fx1 = 2;
 long fy1 = 2;
@@ -46,6 +47,14 @@ ConvolutionalRBM < double > * rbm2 = NULL;
 
 ConvolutionalRBM < double > * rbm3 = NULL;
 
+std::string snapshots =  "";
+
+std::string rbm1_suffix = "/rbm-1.crbm";
+
+std::string rbm2_suffix = "/rbm-2.crbm";
+
+std::string rbm3_suffix = "/rbm-3.crbm";
+
 void train()
 {
   while(true)
@@ -64,6 +73,7 @@ void train()
         rbm2 -> cd(1,eps1,0);
         std::cout << iter << '\t' << rbm2 -> final_error << std::endl;
     }
+    dump_to_file(rbm2,snapshots+rbm2_suffix);
 
     for(long n=0,k=0;n<N;n++)
     {
@@ -96,12 +106,24 @@ void train()
         rbm3 -> cd(1,eps2,0);
         std::cout << iter << '\t' << rbm3 -> final_error << std::endl;
     }
+    dump_to_file(rbm3,snapshots+rbm3_suffix);
+
   }
 }
 
 int main(int argc,char ** argv)
 {
   std::cout << "Cat Classifier" << std::endl;
+  srand(time(0));
+  if(argc>1)
+  {
+    snapshots = argv[2];
+  }
+  else
+  {
+    std::cout << "Please specify snapshot directory." << std::endl;
+    exit(1);
+  }
   // load input
   if(argc>0)
   {
@@ -138,6 +160,7 @@ int main(int argc,char ** argv)
       , true
       , 1
       );
+    load_from_file(rbm,snapshots+rbm1_suffix);
 
     double eps = 0.0;
     for(long iter=0;iter<1;iter++)
@@ -146,6 +169,7 @@ int main(int argc,char ** argv)
         rbm -> cd(1,eps,0);
         std::cout << iter << '\t' << rbm -> final_error << std::endl;
     }
+    dump_to_file(rbm,snapshots+rbm1_suffix);
 
     for(long n=0,k=0;n<1;n++)
     {
@@ -189,6 +213,7 @@ int main(int argc,char ** argv)
       , false
       , 2
       );
+    load_from_file(rbm2,snapshots+rbm2_suffix);
 
     double eps1 = 0.0;
     for(long iter=0;iter<1;iter++)
@@ -240,6 +265,7 @@ int main(int argc,char ** argv)
       , false
       , 2
       );
+    load_from_file(rbm3,snapshots+rbm3_suffix);
 
     double eps2 = 0.0;
     for(long iter=0;iter<1;iter++)
