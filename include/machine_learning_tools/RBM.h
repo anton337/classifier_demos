@@ -83,7 +83,7 @@ void gradient_worker(gradient_info<T> * g,std::vector<long> const & vrtx)
 }
 
 template<typename T>
-void vis2hid_worker(const T * X,T * H,long h,long v,T * c,T * W,std::vector<long> const & vrtx)
+void vis2hid_worker_dummy(const T * X,T * H,long h,long v,T * c,T * W,std::vector<long> const & vrtx)
 {
   for(long t=0;t<vrtx.size();t++)
   {
@@ -101,7 +101,7 @@ void vis2hid_worker(const T * X,T * H,long h,long v,T * c,T * W,std::vector<long
 }
 
 template<typename T>
-void hid2vis_worker(const T * H,T * V,long h,long v,T * b,T * W,std::vector<long> const & vrtx)
+void hid2vis_worker_dummy(const T * H,T * V,long h,long v,T * b,T * W,std::vector<long> const & vrtx)
 {
   for(long t=0;t<vrtx.size();t++)
   {
@@ -121,6 +121,8 @@ void hid2vis_worker(const T * H,T * V,long h,long v,T * b,T * W,std::vector<long
 template<typename T>
 struct RBM : public BoltzmannMachine<T>
 {
+
+  T final_error;
 
   std::vector<T> errs;
   std::vector<T> test_errs;
@@ -297,6 +299,7 @@ struct RBM : public BoltzmannMachine<T>
     static int cnt2 = 0;
     //if(cnt2%100==0)
     std::cout << "rbm error=" << *err << std::endl;
+    final_error = *err;
     cnt2++;
     boost::posix_time::ptime time_5(boost::posix_time::microsec_clock::local_time());
     boost::posix_time::time_duration duration54(time_5 - time_4);
@@ -370,7 +373,7 @@ struct RBM : public BoltzmannMachine<T>
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
-      threads.push_back(new boost::thread(vis2hid_worker<T>,X,H,h,v,c,W,vrtx[thread]));
+      threads.push_back(new boost::thread(vis2hid_worker_dummy<T>,X,H,h,v,c,W,vrtx[thread]));
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
@@ -452,7 +455,7 @@ struct RBM : public BoltzmannMachine<T>
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {
-      threads.push_back(new boost::thread(hid2vis_worker<T>,H,V,h,v,b,W,vrtx[thread]));
+      threads.push_back(new boost::thread(hid2vis_worker_dummy<T>,H,V,h,v,b,W,vrtx[thread]));
     }
     for(long thread=0;thread<vrtx.size();thread++)
     {

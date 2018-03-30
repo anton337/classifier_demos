@@ -391,6 +391,25 @@ struct ConvolutionalRBM : public BoltzmannMachine<T>
     dc = NULL;
     db = NULL;
   }
+
+  void change_input_size ( long _nx, long _ny, long _dx, long _dy, long _n, T * dat )
+  {
+    dx = _dx;
+    dy = _dy;
+    nx = _nx;
+    ny = _ny;
+    n = _n;
+    h = K*dx*dy;
+    v = M*nx*ny;
+    delete [] c;
+    delete [] b;
+    c = new T[K*dx*dy];
+    b = new T[M*nx*ny];
+    zero(c,K*dx*dy);
+    zero(b,M*nx*ny);
+    X = dat;
+  }
+
   ConvolutionalRBM ( long _v
                    , long _h
                    , long _nx

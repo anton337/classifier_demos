@@ -1,15 +1,46 @@
 Project home: /home/antonk/classifier_demos/classifier_demos
-Project: cat_classifier
+Project: cat_classifier_stage_2
 find /home/antonk/classifier_demos/classifier_demos/obj/ -name "*.o" | xargs rm -f
-rm -f /home/antonk/classifier_demos/classifier_demos/bin/cat_classifier/demo.bin
+rm -f /home/antonk/classifier_demos/classifier_demos/bin/cat_classifier_stage_2/demo.bin
 Project home: /home/antonk/classifier_demos/classifier_demos
-Project: cat_classifier
+Project: cat_classifier_stage_2
 g++ -O3 -g0 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/text_tools -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -I/home/antonk/classifier_demos/classifier_demos/include/auto_encoder_tools -c /home/antonk/classifier_demos/classifier_demos/src//diagnostics/Histogram.cpp -o /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o
 g++ -O3 -g0 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/text_tools -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -I/home/antonk/classifier_demos/classifier_demos/include/auto_encoder_tools -c /home/antonk/classifier_demos/classifier_demos/src//file_input/readBMP.cpp -o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o
-g++ -O3 -g0 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/text_tools -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -I/home/antonk/classifier_demos/classifier_demos/include/auto_encoder_tools /home/antonk/classifier_demos/classifier_demos/src/projects/cat_classifier/main.cpp /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o -o /home/antonk/classifier_demos/classifier_demos/bin/cat_classifier/demo.bin -lglut -lGL -lGLU -lboost_system -lboost_thread
+g++ -O3 -g0 -Wno-write-strings -I/home/antonk/classifier_demos/classifier_demos/include/visualization -I/home/antonk/classifier_demos/classifier_demos/include/file_input -I/home/antonk/classifier_demos/classifier_demos/include/machine_learning_tools -I/home/antonk/classifier_demos/classifier_demos/include/snapshots -I/home/antonk/classifier_demos/classifier_demos/include/diagnostics -I/home/antonk/classifier_demos/classifier_demos/include/text_tools -I/home/antonk/classifier_demos/classifier_demos/include/merge_tools -I/home/antonk/classifier_demos/classifier_demos/include/auto_encoder_tools /home/antonk/classifier_demos/classifier_demos/src/projects/cat_classifier_stage_2/main.cpp /home/antonk/classifier_demos/classifier_demos/obj//diagnostics/Histogram.o /home/antonk/classifier_demos/classifier_demos/obj//file_input/readBMP.o -o /home/antonk/classifier_demos/classifier_demos/bin/cat_classifier_stage_2/demo.bin -lglut -lGL -lGLU -lboost_system -lboost_thread
 Project home: /home/antonk/classifier_demos/classifier_demos
-Running project cat_classifier
-Cat Classifier
-Width of /home/antonk/classifier_demos/classifier_demos/data/cat_classifier/kittie-crazy-desktop-black-and-white.bmp: 1600
-Height of /home/antonk/classifier_demos/classifier_demos/data/cat_classifier/kittie-crazy-desktop-black-and-white.bmp: 1200
-h should be K*dx*dy
+Running project cat_classifier_stage_2
+Width of /home/antonk/classifier_demos/classifier_demos/data/cat_classifier_stage_2/kittie-crazy-desktop-black-and-white.bmp: 1600
+Height of /home/antonk/classifier_demos/classifier_demos/data/cat_classifier_stage_2/kittie-crazy-desktop-black-and-white.bmp: 1200
+6684672
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+loading from file:/home/antonk/classifier_demos/classifier_demos/snapshots/cat_classifier_stage_2/../cat_classifier/rbm-1.crbm
+loading from file:/home/antonk/classifier_demos/classifier_demos/snapshots/cat_classifier_stage_2/../cat_classifier/rbm-2.crbm
+loading from file:/home/antonk/classifier_demos/classifier_demos/snapshots/cat_classifier_stage_2/../cat_classifier/rbm-3.crbm
+loading from file:/home/antonk/classifier_demos/classifier_demos/snapshots/cat_classifier_stage_2/../cat_classifier/rbm-4.crbm
+x=0/408
+x=1/408
+x=2/408
+x=3/408
+x=4/408
+x=5/408
+x=6/408
+x=7/408
+x=8/408
+x=9/408
+x=10/408
+x=11/408

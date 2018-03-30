@@ -31,7 +31,7 @@ long N1 = (8)*3;
 
 long fx1 = 2;
 long fy1 = 2;
-double * DAT2 = new double[N*N1*(dx/fx1)*(dy/fy1)];
+double * DAT2 = new double[N1*(dx1/fx1)*(dy1/fy1)];
 
 long nx2 = dx1/fx1;
 long ny2 = dy1/fy1;
@@ -41,11 +41,28 @@ long dx2 = nx2 - (kx2/2)*2;
 long dy2 = ny2 - (ky2/2)*2;
 long N2 = (8)*4;
 
+long fx2 = 2;
+long fy2 = 2;
+double * DAT3 = new double[N2*(dx2/fx2)*(dy2/fy2)];
+
+long nx3 = dx2/fx2;
+long ny3 = dy2/fy2;
+long kx3 = 9;
+long ky3 = 9;
+long dx3 = nx3 - (kx3/2)*2;
+long dy3 = ny3 - (ky3/2)*2;
+long N3 = (8)*5;
+
+//long winx = ( (1 + (kx2/2)*2) * fx1 + (kx1/2)*2) * fx + ((kx/2)*2);
+long winx = ( ( (1 + (kx3/2)*2) * fx2 + (kx2/2)*2) * fx1 + (kx1/2)*2) * fx + (kx/2)*2;
+
 ConvolutionalRBM < double > * rbm = NULL;
 
 ConvolutionalRBM < double > * rbm2 = NULL;
 
 ConvolutionalRBM < double > * rbm3 = NULL;
+
+ConvolutionalRBM < double > * rbm4 = NULL;
 
 std::string snapshots =  "";
 
@@ -54,6 +71,8 @@ std::string rbm1_suffix = "/rbm-1.crbm";
 std::string rbm2_suffix = "/rbm-2.crbm";
 
 std::string rbm3_suffix = "/rbm-3.crbm";
+
+std::string rbm4_suffix = "/rbm-4.crbm";
 
 void train()
 {
@@ -66,53 +85,67 @@ void train()
     //    rbm -> cd(1,eps,0);
     //    std::cout << iter << '\t' << rbm -> final_error << std::endl;
     //}
-    double eps1 = 10;
+    //double eps1 = 10;
+    //for(long iter=0;iter<5;iter++)
+    //{
+    //    rbm2 -> init(0);
+    //    rbm2 -> cd(1,eps1,0);
+    //    std::cout << iter << '\t' << rbm2 -> final_error << std::endl;
+    //}
+    //dump_to_file(rbm2,snapshots+rbm2_suffix);
+
+    //{
+    //    double max_value;
+    //    for(long l=0,k=0;l<N1;l++)
+    //    {
+    //        for(long y=0;y<dy1/fy1;y++)
+    //        {
+    //            for(long x=0;x<dx1/fx1;x++,k++)
+    //            {
+    //                max_value = -1000000;
+    //                for(long _y=0;_y<fy1;_y++)
+    //                {
+    //                    for(long _x=0;_x<fx1;_x++)
+    //                    {
+    //                        max_value = (max_value>rbm2->hid[l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)])
+    //                                  ?  max_value:rbm2->hid[l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)];
+    //                    }
+    //                }
+    //                DAT2[k] = max_value;
+    //            }
+    //        }
+    //    }
+    //}
+
+    //double eps2 = 1;
+    //for(long iter=0;iter<5;iter++)
+    //{
+    //    rbm3 -> init(0);
+    //    rbm3 -> cd(1,eps2,0);
+    //    std::cout << iter << '\t' << rbm3 -> final_error << std::endl;
+    //}
+    //dump_to_file(rbm3,snapshots+rbm3_suffix);
+    //
+    //
+    
+    double eps3 = 1;
     for(long iter=0;iter<5;iter++)
     {
-        rbm2 -> init(0);
-        rbm2 -> cd(1,eps1,0);
-        std::cout << iter << '\t' << rbm2 -> final_error << std::endl;
+        rbm4 -> init(0);
+        rbm4 -> cd(1,eps3,0);
+        std::cout << iter << '\t' << rbm4 -> final_error << std::endl;
     }
-    dump_to_file(rbm2,snapshots+rbm2_suffix);
-
-    for(long n=0,k=0;n<N;n++)
-    {
-        double max_value;
-        for(long l=0;l<N1;l++)
-        {
-            for(long y=0;y<dy1/fy1;y++)
-            {
-                for(long x=0;x<dx1/fx1;x++,k++)
-                {
-                    max_value = -1000000;
-                    for(long _y=0;_y<fy1;_y++)
-                    {
-                        for(long _x=0;_x<fx1;_x++)
-                        {
-                            max_value = (max_value>rbm2->hid[n*N1*dx1*dy1+l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)])
-                                      ?  max_value:rbm2->hid[n*N1*dx1*dy1+l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)];
-                        }
-                    }
-                    DAT2[k] = max_value;
-                }
-            }
-        }
-    }
-
-    double eps2 = 1;
-    for(long iter=0;iter<5;iter++)
-    {
-        rbm3 -> init(0);
-        rbm3 -> cd(1,eps2,0);
-        std::cout << iter << '\t' << rbm3 -> final_error << std::endl;
-    }
-    dump_to_file(rbm3,snapshots+rbm3_suffix);
+    dump_to_file(rbm4,snapshots+rbm4_suffix);
 
   }
 }
 
 int main(int argc,char ** argv)
 {
+  //std::cout << nx  << "\t" << ny  << std::endl;
+  //std::cout << dx2 << "\t" << dy2 << std::endl;
+  //std::cout << winx << std::endl;
+  //return 0;
   std::cout << "Cat Classifier" << std::endl;
   srand(time(0));
   if(argc>1)
@@ -171,10 +204,9 @@ int main(int argc,char ** argv)
     }
     dump_to_file(rbm,snapshots+rbm1_suffix);
 
-    for(long n=0,k=0;n<1;n++)
     {
         double max_value;
-        for(long l=0;l<N;l++)
+        for(long l=0,k=0;l<N;l++)
         {
             for(long y=0;y<dy/fy;y++)
             {
@@ -185,8 +217,8 @@ int main(int argc,char ** argv)
                     {
                         for(long _x=0;_x<fx;_x++)
                         {
-                            max_value = (max_value>rbm->hid[n*N*dx*dy+l*dx*dy+(fy*y+_y)*dx+(fx*x+_x)])
-                                      ?  max_value:rbm->hid[n*N*dx*dy+l*dx*dy+(fy*y+_y)*dx+(fx*x+_x)];
+                            max_value = (max_value>rbm->hid[l*dx*dy+(fy*y+_y)*dx+(fx*x+_x)])
+                                      ?  max_value:rbm->hid[l*dx*dy+(fy*y+_y)*dx+(fx*x+_x)];
                         }
                     }
                     DAT[k] = max_value;
@@ -223,10 +255,9 @@ int main(int argc,char ** argv)
         std::cout << iter << '\t' << rbm2 -> final_error << std::endl;
     }
 
-    for(long n=0,k=0;n<N;n++)
     {
         double max_value;
-        for(long l=0;l<N1;l++)
+        for(long l=0,k=0;l<N1;l++)
         {
             for(long y=0;y<dy1/fy1;y++)
             {
@@ -237,8 +268,8 @@ int main(int argc,char ** argv)
                     {
                         for(long _x=0;_x<fx1;_x++)
                         {
-                            max_value = (max_value>rbm2->hid[n*N1*dx1*dy1+l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)])
-                                      ?  max_value:rbm2->hid[n*N1*dx1*dy1+l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)];
+                            max_value = (max_value>rbm2->hid[l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)])
+                                      ?  max_value:rbm2->hid[l*dx1*dy1+(fy1*y+_y)*dx1+(fx1*x+_x)];
                         }
                     }
                     DAT2[k] = max_value;
@@ -273,6 +304,57 @@ int main(int argc,char ** argv)
         rbm3 -> init(0);
         rbm3 -> cd(1,eps2,0);
         std::cout << iter << '\t' << rbm3 -> final_error << std::endl;
+    }
+
+    {
+        double max_value;
+        for(long l=0,k=0;l<N2;l++)
+        {
+            for(long y=0;y<dy2/fy2;y++)
+            {
+                for(long x=0;x<dx2/fx2;x++,k++)
+                {
+                    max_value = -1000000;
+                    for(long _y=0;_y<fy2;_y++)
+                    {
+                        for(long _x=0;_x<fx2;_x++)
+                        {
+                            max_value = (max_value>rbm3->hid[l*dx2*dy2+(fy2*y+_y)*dx2+(fx2*x+_x)])
+                                      ?  max_value:rbm3->hid[l*dx2*dy2+(fy2*y+_y)*dx2+(fx2*x+_x)];
+                        }
+                    }
+                    DAT3[k] = max_value;
+                }
+            }
+        }
+    }
+
+    rbm4 = 
+      new ConvolutionalRBM < double > 
+      (
+        N2 * nx3 * ny3
+      , N3 * dx3 * dy3
+      , nx3
+      , ny3
+      , dx3
+      , dy3
+      , kx3
+      , ky3
+      , N2
+      , N3
+      , 1
+      , DAT3
+      , false
+      , 2
+      );
+    //load_from_file(rbm4,snapshots+rbm4_suffix);
+
+    double eps3 = 0.0;
+    for(long iter=0;iter<1;iter++)
+    {
+        rbm4 -> init(0);
+        rbm4 -> cd(1,eps3,0);
+        std::cout << iter << '\t' << rbm4 -> final_error << std::endl;
     }
   
     {
@@ -348,6 +430,32 @@ int main(int argc,char ** argv)
         viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm3
                                                                   , new CRBMConvolutionProbe < double > ( rbm3 )
                                                                   ,  1.75 , 2
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_hidden );
+    }
+
+    {
+        VisualizeCRBMVisibleProbe < double > * viz_crbm_visible = NULL;
+        viz_crbm_visible = new VisualizeCRBMVisibleProbe < double > ( rbm4
+                                                                    , new CRBMConvolutionProbe < double > ( rbm4 )
+                                                                    ,  2 , 2.25
+                                                                    , -1 , 1
+                                                                    );
+        addDisplay ( viz_crbm_visible );
+
+        VisualizeCRBMKernelProbe < double > * viz_crbm_kernel = NULL;
+        viz_crbm_kernel = new VisualizeCRBMKernelProbe < double > ( rbm4
+                                                                  , new CRBMConvolutionProbe < double > ( rbm4 )
+                                                                  , 2.25 , 2.75
+                                                                  ,  -1 , 1
+                                                                  );
+        addDisplay ( viz_crbm_kernel );
+
+        VisualizeCRBMHiddenProbe < double > * viz_crbm_hidden = NULL;
+        viz_crbm_hidden = new VisualizeCRBMHiddenProbe < double > ( rbm4
+                                                                  , new CRBMConvolutionProbe < double > ( rbm4 )
+                                                                  ,  2.75 , 3
                                                                   ,  -1 , 1
                                                                   );
         addDisplay ( viz_crbm_hidden );
