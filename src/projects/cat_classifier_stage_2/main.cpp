@@ -460,41 +460,323 @@ int main(int argc,char ** argv)
     long N3 = .8*N2;
     long N4 = .8*N3;
     long N5 = .8*N4;
+    long N6 = N5-4;
+    long N7 = N6-3;
+    long N8 = N7-3;
 
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N0;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  1;
+            range_max[x] = -1;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (DATA[k]<range_min[x])?DATA[k]:range_min[x];
+            range_max[x] = (DATA[k]>range_max[x])?DATA[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            DATA[k] = (DATA[k]-range_min[x])/(range_max[x]-range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  1;
+            range_max[x] = -1;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (DATA[k]<range_min[x])?DATA[k]:range_min[x];
+            range_max[x] = (DATA[k]>range_max[x])?DATA[k]:range_max[x];
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
+    }
     RBM<double> * inner_rbm1 = new RBM<double>(N0,N1,nsamp,DATA);
-    for(long iter=0;iter<10000;iter++)
+    for(long iter=0;iter<100000;iter++)
     {
         inner_rbm1 -> init(0);
         inner_rbm1 -> cd(1,0.1,0);
-        std::cout << "1" << '\t' << N1 << std::endl;
+        std::cout << iter << '\t' << inner_rbm1->final_error << std::endl;
+        //std::cout << "1" << '\t' << N1 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N1;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm1->hid[k]<range_min[x])?inner_rbm1->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm1->hid[k]>range_max[x])?inner_rbm1->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm1->hid[k] = (inner_rbm1->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
     }
     RBM<double> * inner_rbm2 = new RBM<double>(N1,N2,nsamp,inner_rbm1->hid);
     for(long iter=0;iter<10000;iter++)
     {
         inner_rbm2 -> init(0);
         inner_rbm2 -> cd(1,0.1,0);
-        std::cout << "2" << '\t' << N2 << std::endl;
+        //std::cout << "2" << '\t' << N2 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N2;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm2->hid[k]<range_min[x])?inner_rbm2->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm2->hid[k]>range_max[x])?inner_rbm2->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm2->hid[k] = (inner_rbm2->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
     }
     RBM<double> * inner_rbm3 = new RBM<double>(N2,N3,nsamp,inner_rbm2->hid);
     for(long iter=0;iter<10000;iter++)
     {
         inner_rbm3 -> init(0);
         inner_rbm3 -> cd(1,0.1,0);
-        std::cout << "3" << '\t' << N3 << std::endl;
+        //std::cout << "3" << '\t' << N3 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N3;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm3->hid[k]<range_min[x])?inner_rbm3->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm3->hid[k]>range_max[x])?inner_rbm3->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm3->hid[k] = (inner_rbm3->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
     }
     RBM<double> * inner_rbm4 = new RBM<double>(N3,N4,nsamp,inner_rbm3->hid);
     for(long iter=0;iter<10000;iter++)
     {
         inner_rbm4 -> init(0);
         inner_rbm4 -> cd(1,0.1,0);
-        std::cout << "4" << '\t' << N4 << std::endl;
+        //std::cout << "4" << '\t' << N4 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N4;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm4->hid[k]<range_min[x])?inner_rbm4->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm4->hid[k]>range_max[x])?inner_rbm4->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm4->hid[k] = (inner_rbm4->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
     }
     RBM<double> * inner_rbm5 = new RBM<double>(N4,N5,nsamp,inner_rbm4->hid);
     for(long iter=0;iter<10000;iter++)
     {
         inner_rbm5 -> init(0);
         inner_rbm5 -> cd(1,0.1,0);
-        std::cout << "5" << '\t' << N5 << std::endl;
+        //std::cout << "5" << '\t' << N5 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N5;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm5->hid[k]<range_min[x])?inner_rbm5->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm5->hid[k]>range_max[x])?inner_rbm5->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm5->hid[k] = (inner_rbm5->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
+    }
+    RBM<double> * inner_rbm6 = new RBM<double>(N5,N6,nsamp,inner_rbm4->hid);
+    for(long iter=0;iter<10000;iter++)
+    {
+        inner_rbm6 -> init(0);
+        inner_rbm6 -> cd(1,0.1,0);
+        //std::cout << "6" << '\t' << N6 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N6;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm6->hid[k]<range_min[x])?inner_rbm6->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm6->hid[k]>range_max[x])?inner_rbm6->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm6->hid[k] = (inner_rbm6->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
+    }
+    RBM<double> * inner_rbm7 = new RBM<double>(N6,N7,nsamp,inner_rbm4->hid);
+    for(long iter=0;iter<10000;iter++)
+    {
+        inner_rbm7 -> init(0);
+        inner_rbm7 -> cd(1,0.1,0);
+        //std::cout << "6" << '\t' << N6 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N7;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm7->hid[k]<range_min[x])?inner_rbm7->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm7->hid[k]>range_max[x])?inner_rbm7->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm7->hid[k] = (inner_rbm7->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
+    }
+    RBM<double> * inner_rbm8 = new RBM<double>(N7,N8,nsamp,inner_rbm4->hid);
+    for(long iter=0;iter<10000;iter++)
+    {
+        inner_rbm8 -> init(0);
+        inner_rbm8 -> cd(1,0.1,0);
+        //std::cout << "6" << '\t' << N6 << std::endl;
+    }
+    {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+        long N = N8;
+        float * range_min = new float[N];
+        float * range_max = new float[N];
+        for(long x=0;x<N;x++)
+        {
+            range_min[x] =  10000000000000;
+            range_max[x] = -10000000000000;
+        }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            range_min[x] = (inner_rbm8->hid[k]<range_min[x])?inner_rbm8->hid[k]:range_min[x];
+            range_max[x] = (inner_rbm8->hid[k]>range_max[x])?inner_rbm8->hid[k]:range_max[x];
+          }
+        for(long i=0,k=0;i<nsamp;i++)
+          for(long x=0;x<N;x++,k++)
+          {
+            inner_rbm8->hid[k] = (inner_rbm8->hid[k] - range_min[x])/(range_max[x] - range_min[x]);
+          }
+        for(long x=0;x<N;x++)
+        {
+          std::cout << range_min[x] << '\t' << range_max[x] << std::endl;
+        }
+    }
+    {
+        std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << std::endl;
+        long N = N8;
+        for(long i=0,k=0;i<nsamp;i++)
+        {
+          for(long x=0;x<N;x++,k++)
+          {
+            std::cout << inner_rbm8->hid[k] << ' ';
+          }
+          std::cout << std::endl;
+        }
     }
 
 

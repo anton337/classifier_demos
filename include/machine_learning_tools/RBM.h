@@ -95,7 +95,7 @@ void vis2hid_worker_dummy(const T * X,T * H,long h,long v,T * c,T * W,std::vecto
       {
         H[k*h+j] += W[i*h+j] * X[k*v+i];
       }
-      H[k*h+j] = 1.0f/(1.0f + exp(-H[k*h+j]));
+      H[k*h+j] = 1.0f/(1.0f + exp(-1*H[k*h+j]));
     }
   }
 }
@@ -113,7 +113,7 @@ void hid2vis_worker_dummy(const T * H,T * V,long h,long v,T * b,T * W,std::vecto
       {
         V[k*v+i] += W[i*h+j] * H[k*h+j];
       }
-      V[k*v+i] = 1.0f/(1.0f + exp(-V[k*v+i]));
+      V[k*v+i] = 1.0f/(1.0f + exp(-1*V[k*v+i]));
     }
   }
 }
@@ -298,7 +298,7 @@ struct RBM : public BoltzmannMachine<T>
     test_errs.push_back(*err);
     static int cnt2 = 0;
     //if(cnt2%100==0)
-    std::cout << "rbm error=" << *err << std::endl;
+    //std::cout << "rbm error=" << *err << std::endl;
     final_error = *err;
     cnt2++;
     boost::posix_time::ptime time_5(boost::posix_time::microsec_clock::local_time());
