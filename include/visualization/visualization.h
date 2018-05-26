@@ -58,6 +58,15 @@ void draw(void)
         displays[i] -> update ();
     }
 
+    visualize_model_output ( mod_perceptron 
+                           , mod_min_x 
+                           , mod_max_x 
+                           , mod_n_x 
+                           , mod_min_y 
+                           , mod_max_y 
+                           , mod_n_y 
+                           );
+
     change_pos_index  = false;
     change_neg_index  = false;
     change_up_index   = false;

@@ -11,10 +11,8 @@ void test_spiral_fitting()
 {
   std::vector<long> nodes;
   nodes.push_back(2); // inputs
-  nodes.push_back(10); // hidden layer
-  nodes.push_back(10); // hidden layer
-  nodes.push_back(10); // hidden layer
-  nodes.push_back(10); // hidden layer
+  nodes.push_back(20); // hidden layer
+  nodes.push_back(20); // hidden layer
   nodes.push_back(1); // output layer
   nodes.push_back(1); // outputs
   perceptron = new Perceptron<double>(nodes);
@@ -41,11 +39,11 @@ void test_spiral_fitting()
     {
       in_dat[dim*i+0] = -R*cos(th);
       in_dat[dim*i+1] = -R*sin(th);
-      out_dat[i] = 0;
+      out_dat[i] = 1e-5;
     }
   }
-  perceptron -> alpha = 1;
-  perceptron -> train(0,.1,100000,num,dim,1,in_dat,out_dat,true);
+  perceptron -> alpha = 10;
+  perceptron -> train(0,0.1,100000,num,dim,1,in_dat,out_dat,true,0,NULL,NULL,NULL,false);
 }
 
 int main(int argc,char ** argv)

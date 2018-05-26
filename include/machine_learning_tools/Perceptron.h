@@ -1312,6 +1312,7 @@ struct Perceptron
                , T * test_variables = NULL
                , T * test_labels = NULL
                , quasi_newton_info<T> * q_newton = NULL
+               , bool svrg = true
                )
     {
         sigmoid_type = p_sigmoid_type;
@@ -1393,30 +1394,44 @@ struct Perceptron
             for(long thread=0;thread<vrtx.size();thread++)
             {
               g[thread]->reset();
-              if(iter%10==0)
-              {
-                threads.push_back ( new boost::thread ( training_worker<T>
-                                                      , vrtx.size()
-                                                      , iter,g[thread]
-                                                      , vrtx[thread]
-                                                      , variables
-                                                      , labels
-                                                      )
-                                  );
+              if(svrg) {
+                if(iter%10==0)
+                {
+                  threads.push_back ( new boost::thread ( training_worker<T>
+                                                        , vrtx.size()
+                                                        , iter,g[thread]
+                                                        , vrtx[thread]
+                                                        , variables
+                                                        , labels
+                                                        )
+                                    );
+                }
+                
+                else
+                {
+                  threads.push_back ( new boost::thread ( training_worker_svrg<T>
+                                                        , vrtx.size()
+                                                        , iter,g[thread]
+                                                        , vrtx[thread]
+                                                        , variables
+                                                        , labels
+                                                        )
+                                    );
+                }
               }
               else
               {
-                threads.push_back ( new boost::thread ( training_worker_svrg<T>
-                                                      , vrtx.size()
-                                                      , iter,g[thread]
-                                                      , vrtx[thread]
-                                                      , variables
-                                                      , labels
-                                                      )
-                                  );
+                  threads.push_back ( new boost::thread ( training_worker<T>
+                                                        , vrtx.size()
+                                                        , iter,g[thread]
+                                                        , vrtx[thread]
+                                                        , variables
+                                                        , labels
+                                                        )
+                                    );
               }
             }
-            usleep(10000);
+            //usleep(10000);
             for(long thread=0;thread<vrtx.size();thread++)
             {
               threads[thread]->join();

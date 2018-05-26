@@ -1,4 +1,4 @@
-#export PROJECT=spiral_fitting
+export PROJECT=spiral_fitting
 #export PROJECT=simple_ann_classification
 #export PROJECT=xor_tutorial
 #export PROJECT=signal_tracking
@@ -13,7 +13,7 @@
 #export PROJECT=afi_convolutional_rbm
 #export PROJECT=convolutional_rbm_auto_encoder
 #export PROJECT=cat_classifier
-export PROJECT=cat_classifier_stage_2
+#export PROJECT=cat_classifier_stage_2
 
 ./clean.sh
 
