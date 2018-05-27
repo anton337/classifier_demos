@@ -40,7 +40,7 @@ void model()
         }
         std::cout << "ans:" << max_i << std::endl;
         delete [] out;
-        usleep(10000);
+        usleep(1000000);
     }
 }
 
@@ -58,20 +58,20 @@ void test_mnist()
       for(int j=0;j<n_out;j++)
       {
         {
-          //out_dat[n_out*i+j] = (i/(100*5)==J)?1.0:0.0;
-          out_dat[n_out*i+j] = (i/(100*5)==j)?1.0:0.0;
+          out_dat[n_out*i+j] = (i/(100*5)==J)?1.0:1.0e-5;
+          if(out_dat[n_out*i+j]<0.1)if(rand()%10<5)out_dat[n_out*i+j]=0;
         }
       }
     }
-    //perceptrons[J] -> train(0,.01,1000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
-    perceptron -> train(0,1.0,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
+    perceptrons[J] -> train(0,1e-1,100000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat,0,false,NULL,NULL,NULL,true,1000);
+    //perceptron -> train(0,1e-1,10000,N,viz_in_dat->n_x*viz_in_dat->n_y,n_out,viz_in_dat->viz_dat,out_dat);
     std::stringstream ss;
-    //ss << output_dir << "/mnist-" << J << ".ann";
-    ss << output_dir << "/mnist.ann";
+    ss << output_dir << "/mnist-" << J << ".ann";
+    //ss << output_dir << "/mnist.ann";
     dump_to_file(perceptrons[J],ss.str());
     J = (J+1)%10;
-    //perceptron = perceptrons[J];
-    //viz_probe->probe_perceptron = perceptrons[J];
+    perceptron = perceptrons[J];
+    viz_probe->probe_perceptron = perceptrons[J];
   }
 }
 
@@ -107,17 +107,17 @@ int main(int argc,char ** argv)
       nodes.push_back(1); // outputs
       for(int i=0;i<10;i++)
       {
-        perceptrons.push_back(new Perceptron<double>(nodes));
+        perceptrons.push_back(new Perceptron<double>(nodes,1e-1));
         std::stringstream ss;
         ss << output_dir << "/mnist-" << i << ".ann";
-        load_from_file ( perceptrons[i] , ss.str() );
+        //load_from_file ( perceptrons[i] , ss.str() );
       }
 
       MergePerceptrons<double> merge_perceptrons;
       merged = merge_perceptrons . merge ( perceptrons );
 
-      //perceptron = perceptrons[0];
-      perceptron = merged;
+      perceptron = perceptrons[0];
+      //perceptron = merged;
 
       double * D = dat->get_doubles(nx,ny);
       viz_in_dat = new VisualizeDataArray < double > ( dat->get_size()
@@ -128,12 +128,12 @@ int main(int argc,char ** argv)
                                                      , D
                                                      , -1 , 0 , -1 , 1
                                                      );
-      viz_probe = new VisualizeActivationProbe < double > ( merged // perceptrons[0]
-                                                          , new ActivationProbe<double> ( merged // perceptrons[0]
+      viz_probe = new VisualizeActivationProbe < double > ( perceptrons[0] // merged
+                                                          , new ActivationProbe<double> ( perceptrons[0] // merged
                                                                                         , 0
                                                                                         )
                                                           , 20     , 4 * 2
-                                                          , 20     , 4 * 5
+                                                          , 20     , 2 // 4 * 5
                                                           //20x20  //16
                                                           , 0 , 1 , -1 , 1
                                                           );
@@ -149,7 +149,7 @@ int main(int argc,char ** argv)
     // run test
     new boost::thread(test_mnist);
 
-    new boost::thread(model);
+    //new boost::thread(model);
 
     // start graphics
     startGraphics(argc,argv,"Simple ANN Classification - MNIST Digits");

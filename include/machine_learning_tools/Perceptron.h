@@ -1130,7 +1130,7 @@ struct Perceptron
     T alpha;
     int sigmoid_type;
 
-    Perceptron(std::vector<long> p_nodes)
+    Perceptron(std::vector<long> p_nodes,T error_scale = 1e-1)
     {
 
         quasi_newton = NULL;
@@ -1174,14 +1174,14 @@ struct Perceptron
                 weights_neuron[layer][i] = new T[n_nodes[layer]];
                 for(long j=0;j<n_nodes[layer];j++)
                 {
-                    T val = 1e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
+                    T val = error_scale * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
                     weights_neuron[layer][i][j] = val;
                 }
             }
             weights_bias[layer] = new T[n_nodes[layer+1]];
             for(long i=0;i<n_nodes[layer+1];i++)
             {
-                T val = 1e-1 * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
+                T val = error_scale * (-1.0 + 2.0 * ((rand()%10000)/10000.0));
                 weights_bias[layer][i] = val;
             }
         }
@@ -1313,6 +1313,7 @@ struct Perceptron
                , T * test_labels = NULL
                , quasi_newton_info<T> * q_newton = NULL
                , bool svrg = true
+               , int svrg_factor = 10
                )
     {
         sigmoid_type = p_sigmoid_type;
@@ -1395,7 +1396,7 @@ struct Perceptron
             {
               g[thread]->reset();
               if(svrg) {
-                if(iter%10==0)
+                if(iter%svrg_factor==0)
                 {
                   threads.push_back ( new boost::thread ( training_worker<T>
                                                         , vrtx.size()
