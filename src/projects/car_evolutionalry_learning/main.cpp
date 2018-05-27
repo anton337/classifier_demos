@@ -52,6 +52,8 @@ initRoad()
 {
   float R=1;
   float delta=2*M_PI/70;
+  segments.push_back ( segment ( 1.2,-.3, 1.1,0 ) ); 
+  segments.push_back ( segment ( 1.2,-.3, 1.3,0 ) ); 
   for(float th=0;th<M_PI;th+=delta){
     segments.push_back ( segment ( (R+.1)*(1+0.2*cos((th-0.5*delta)*6))*cos(th-0.5*delta)
                                  , (R+.1)*(1+0.2*cos((th-0.5*delta)*6))*sin(th-0.5*delta)
@@ -63,6 +65,38 @@ initRoad()
                                  , (R-.1)*(1+(0.25+th*0.05)*cos((th-0.5*delta)*6))*sin(th-0.5*delta)
                                  , (R-.1)*(1+(0.25+th*0.05)*cos((th+0.5*delta)*6))*cos(th+0.5*delta)
                                  , (R-.1)*(1+(0.25+th*0.05)*cos((th+0.5*delta)*6))*sin(th+0.5*delta)
+                                 )
+                       );
+  }
+  float DX = -2.57;
+  float DY = .1;
+  for(float th=0;th<M_PI;th+=delta){
+    segments.push_back ( segment ( DX-(R+.1)*(1+0.2*cos((th-0.5*delta)*6))*cos(th-0.5*delta)
+                                 , DY-(R+.1)*(1+0.2*cos((th-0.5*delta)*6))*sin(th-0.5*delta)
+                                 , DX-(R+.1)*(1+0.2*cos((th+0.5*delta)*6))*cos(th+0.5*delta)
+                                 , DY-(R+.1)*(1+0.2*cos((th+0.5*delta)*6))*sin(th+0.5*delta)
+                                 )
+                       );
+    segments.push_back ( segment ( DX-(R-.1)*(1+(0.25+th*0.05)*cos((th-0.5*delta)*6))*cos(th-0.5*delta)
+                                 , DY-(R-.1)*(1+(0.25+th*0.05)*cos((th-0.5*delta)*6))*sin(th-0.5*delta)
+                                 , DX-(R-.1)*(1+(0.25+th*0.05)*cos((th+0.5*delta)*6))*cos(th+0.5*delta)
+                                 , DY-(R-.1)*(1+(0.25+th*0.05)*cos((th+0.5*delta)*6))*sin(th+0.5*delta)
+                                 )
+                       );
+  }
+  DX = -5;
+  DY = .2;
+  for(float th=0;th<M_PI;th+=delta){
+    segments.push_back ( segment ( DX+(R+.1)*(1+0.2*cos((th-0.5*delta)*6))*cos(th-0.5*delta)
+                                 , DY+(R+.1)*(1+0.2*cos((th-0.5*delta)*6))*sin(th-0.5*delta)
+                                 , DX+(R+.1)*(1+0.2*cos((th+0.5*delta)*6))*cos(th+0.5*delta)
+                                 , DY+(R+.1)*(1+0.2*cos((th+0.5*delta)*6))*sin(th+0.5*delta)
+                                 )
+                       );
+    segments.push_back ( segment ( DX+(R-.1)*(1+(0.25+th*0.05)*cos((th-0.5*delta)*6))*cos(th-0.5*delta)
+                                 , DY+(R-.1)*(1+(0.25+th*0.05)*cos((th-0.5*delta)*6))*sin(th-0.5*delta)
+                                 , DX+(R-.1)*(1+(0.25+th*0.05)*cos((th+0.5*delta)*6))*cos(th+0.5*delta)
+                                 , DY+(R-.1)*(1+(0.25+th*0.05)*cos((th+0.5*delta)*6))*sin(th+0.5*delta)
                                  )
                        );
   }
@@ -184,7 +218,7 @@ car
 
 std::vector<car*> drone;
 
-int n_iters = 1000;
+int n_iters = 3500;
 
 int g_iter = 0;
 
@@ -267,14 +301,14 @@ init(void)
   glMatrixMode(GL_PROJECTION);
   gluPerspective( /* field of view in degree */ 40.0,
     /* aspect ratio */ 1.0,
-    /* Z near */ 1.0, /* Z far */ 10.0);
+    /* Z near */ 1.0, /* Z far */ 100.0);
   glMatrixMode(GL_MODELVIEW);
   gluLookAt(0.0, 0.0, 5.0,  /* eye is at (0,0,5) */
     0.0, 0.0, 0.0,      /* center is at (0,0,0) */
     0.0, 1.0, 0.);      /* up is in positive Y direction */
 
   /* Adjust cube position to be asthetic angle. */
-  glTranslatef(0.0, 0.0, -1.0);
+  glTranslatef(0.0, 0.0, -13.0);
 }
 
 void
@@ -295,7 +329,7 @@ int
 main(int argc, char **argv)
 {
   srand(time(0));
-  for(int i=0;i<10;i++){
+  for(int i=0;i<3000;i++){
     drone.push_back(new car(1.2,0,M_PI/2));
   }
   std::cout << "Car Simulation" << std::endl;
